@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: devguard
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  ml:
+    build: ./ml
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    volumes:
+      - ./ml/models:/app/models
+      - ./chroma_db:/app/chroma_db
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+      - ml
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      ML_SIDECAR_URL: http://ml:8001
+    volumes:
+      - ./chroma_db:/app/chroma_db
+
+volumes:
+  postgres_data:
+  redis_data:

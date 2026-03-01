@@ -1,0 +1,25 @@
+# DevGuard Risk Policy Configuration
+# TODO: define thresholds and rules for blast radius scoring
+
+risk:
+  green:
+    max_score: 30
+    auto_execute: true
+  yellow:
+    max_score: 70
+    veto_window_hours: 1
+  red:
+    min_score: 71
+    requires_explicit_approval: true
+
+fail_safe:
+  # Patterns that always trigger RED regardless of score
+  always_red_patterns:
+    - "payment"
+    - "auth"
+    - "migration"
+    - "delete"
+    - "drop"
+
+incident:
+  countdown_seconds: 45
