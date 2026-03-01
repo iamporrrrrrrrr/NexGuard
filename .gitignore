@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+
+# Prisma generated client
+node_modules/.prisma/
+
+# ML model weights
+ml/models/*.pt
+ml/models/*.bin
+ml/models/*.safetensors
+!ml/models/.gitkeep
+
+# ML training data
+ml/train/data/*.jsonl
+!ml/train/data/.gitkeep
+
+# ChromaDB local store
+chroma_db/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Lock files (keep pnpm-lock.yaml, ignore others)
+package-lock.json
+yarn.lock
