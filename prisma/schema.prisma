@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Proposal {
+  id                   String         @id @default(uuid())
+  ticketTitle          String
+  ticketDescription    String
+  repo                 String
+  reporter             String
+  summary              String
+  diff                 String         @db.Text
+  filesToModify        String[]
+  risks                String[]
+  confidence           Float
+  whatIDidntDo         String
+  testCoverageAffected Boolean
+  tier                 Tier
+  riskScore            Int
+  riskReasons          String[]
+  failSafeTriggered    Boolean        @default(false)
+  status               ProposalStatus @default(PENDING)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  approval  Approval?
+  auditLogs AuditLog[]
+}
+
+model Approval {
+  id         String         @id @default(uuid())
+  proposalId String         @unique
+  proposal   Proposal       @relation(fields: [proposalId], references: [id])
+  actor      String
+  action     ApprovalAction
+  reason     String?
+  createdAt  DateTime       @default(now())
+}
+
+model AuditLog {
+  id         String     @id @default(uuid())
+  proposalId String?
+  proposal   Proposal?  @relation(fields: [proposalId], references: [id])
+  event      AuditEvent
+  actor      String
+  metadata   Json?
+  createdAt  DateTime   @default(now())
+}
+
+model Incident {
+  id          String         @id @default(uuid())
+  description String
+  logs        String         @db.Text
+  repo        String
+  reporter    String
+  status      IncidentStatus @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  resolvedAt  DateTime?
+
+  hotfixes Hotfix[]
+}
+
+model Hotfix {
+  id          String       @id @default(uuid())
+  incidentId  String
+  incident    Incident     @relation(fields: [incidentId], references: [id])
+  summary     String
+  diff        String       @db.Text
+  confidence  Float
+  blastRadius String
+  status      HotfixStatus @default(PENDING)
+  appliedBy   String?
+  appliedAt   DateTime?
+  createdAt   DateTime     @default(now())
+}
+
+enum Tier {
+  GREEN
+  YELLOW
+  RED
+}
+
+enum ProposalStatus {
+  PENDING
+  AUTO_EXECUTED
+  AWAITING_APPROVAL
+  APPROVED
+  REJECTED
+  VETOED
+  EXECUTED
+  FAILED
+}
+
+enum ApprovalAction {
+  APPROVED
+  REJECTED
+  VETOED
+}
+
+enum AuditEvent {
+  PROPOSED
+  AUTO_EXECUTED
+  APPROVAL_SENT
+  APPROVED
+  REJECTED
+  VETOED
+  EXECUTED
+  FAILED
+  INCIDENT_DECLARED
+  HOTFIX_APPLIED
+  ARTIFACT_GENERATED
+}
+
+enum IncidentStatus {
+  ACTIVE
+  RESOLVED
+}
+
+enum HotfixStatus {
+  PENDING
+  APPLIED
+  REJECTED
+}
