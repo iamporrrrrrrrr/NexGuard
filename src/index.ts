@@ -1,32 +1,40 @@
-import express from "express";
+import express, { Request, Response, NextFunction, type Express } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// TODO: import routes
-// import intakeRouter from "./routes/intake";
-// import incidentRouter from "./routes/incident";
+import intakeRouter from "./routes/intake";
+import incidentRouter from "./routes/incident";
 import approvalRouter from "./routes/approval";
-// import auditRouter from "./routes/audit";
+import auditRouter from "./routes/audit";
 import slackRouter from "./routes/slack";
 
-const app = express();
+const app: Express = express();
 const PORT = process.env.PORT ?? 3000;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For Slack payloads
 
-// TODO: mount routes
-// app.use("/intake", intakeRouter);
-// app.use("/incident", incidentRouter);
+// Mount routes
+app.use("/intake", intakeRouter);
+app.use("/incident", incidentRouter);
 app.use("/", approvalRouter);
-// app.use("/audit", auditRouter);
+app.use("/audit", auditRouter);
 app.use("/slack", slackRouter);
 
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Global error-handling middleware — catches unhandled errors from all routes
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[global] Unhandled error:", err);
+  res.status(500).json({
+    error: "Internal server error",
+    ...(process.env.NODE_ENV !== "production" && { detail: err.message }),
+  });
 });
 
 app.listen(PORT, () => {

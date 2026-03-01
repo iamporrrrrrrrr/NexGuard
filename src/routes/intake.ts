@@ -11,7 +11,7 @@ import { executeProposal } from "../services/executor";
 
 // POST /intake — Submit a development task (mock Jira intake)
 // Body: TicketInput { title, description, repo, reporter }
-const router = Router();
+const router: Router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
   try {
@@ -34,10 +34,6 @@ router.post("/", async (req: Request, res: Response) => {
         summary: `${title} ${description}`,
         diff: "",
         files_to_modify: [],
-        risks: [],
-        confidence: 1,
-        what_i_didnt_do: "",
-        test_coverage_affected: false,
       });
     } catch {
       // ML sidecar unavailable — continue without duplicate check

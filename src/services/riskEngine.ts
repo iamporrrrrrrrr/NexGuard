@@ -1,6 +1,6 @@
 import axios from "axios";
 import { CodexProposal, RiskScore } from "../types";
-import { getPolicy } from "../config/policy";
+import { getPolicy, PolicyConfig } from "../config/policy";
 
 const ML_SIDECAR_URL = process.env.ML_SIDECAR_URL ?? "http://localhost:8001";
 
@@ -32,10 +32,8 @@ export interface SimilarityResponse {
 // ---------------------------------------------------------------------------
 
 function rulesBasedScore(proposal: CodexProposal): RiskScore {
-  const policy = getPolicy() as any;
-  const alwaysRedPatterns: string[] = policy?.fail_safe?.always_red_patterns ?? [
-    "payment", "auth", "migration", "delete", "drop",
-  ];
+  const policy = getPolicy();
+  const alwaysRedPatterns = policy.fail_safe.always_red_patterns;
 
   let score = 0;
   const reasons: string[] = [];

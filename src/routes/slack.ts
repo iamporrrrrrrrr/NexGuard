@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma";
 import * as crypto from "crypto";
 
 // POST /slack/events — Slack interactive component callback
-const router = Router();
+const router: Router = Router();
 
 // Verify Slack request signature
 function verifySlackSignature(

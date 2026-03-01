@@ -7,7 +7,7 @@ import { sendHotfixCard } from "../integrations/slack";
 
 // POST /incident — Declare an incident
 // Body: IncidentInput { description, logs, repo, reporter }
-const router = Router();
+const router: Router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
   try {
@@ -44,7 +44,7 @@ router.post("/", async (req: Request, res: Response) => {
       const COUNTDOWN_MS = 45_000;
       candidates = await Promise.race<HotfixCandidate[]>([
         rankHotfixes(input),
-        new Promise((_, reject) =>
+        new Promise<HotfixCandidate[]>((_, reject) =>
           setTimeout(() => reject(new Error("Incident agent timed out after 45s")), COUNTDOWN_MS)
         ),
       ]);
