@@ -49,6 +49,47 @@ async function seed() {
     }),
   });
 
+  // Scenario D — Jira Webhook (simulates what Jira Automation would send)
+  console.log("Sending Jira webhook scenario...");
+  const jiraRes = await fetch(`${BASE_URL}/intake/jira`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      webhookEvent: "jira:issue_created",
+      issue: {
+        key: "DEV-142",
+        self: "https://your-org.atlassian.net/rest/api/3/issue/DEV-142",
+        fields: {
+          summary: "Add rate limiting to public API endpoints",
+          description: {
+            type: "doc",
+            version: 1,
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "Implement rate limiting (100 req/min per API key) on all /api/v1/* routes. Use Redis sliding window. Update 4 route files and add a new middleware."
+                  }
+                ]
+              }
+            ]
+          },
+          project: { key: "DEV" },
+          issuetype: { name: "Task" },
+          priority: { name: "High" },
+          reporter: { displayName: "eve", emailAddress: "eve@company.com" },
+          creator: { displayName: "eve" },
+          labels: ["repo:devguard-org/demo-app", "backend", "security"],
+          components: [{ name: "API Gateway" }],
+        },
+      },
+    }),
+  });
+  const jiraData = await jiraRes.json();
+  console.log(`Jira webhook response (${jiraRes.status}):`, JSON.stringify(jiraData, null, 2));
+
   console.log("Demo scenarios seeded.");
 }
 
