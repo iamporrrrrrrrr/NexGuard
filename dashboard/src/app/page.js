@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 // TODO: Set to false to use real backend data
-const USE_DUMMY_DATA = true;
+const USE_DUMMY_DATA = false;
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -39,25 +39,12 @@ export default function Home() {
   const [activePage, setActivePage] = useState("Overview");
   const [notifications, setNotifications] = useState(dummyNotifications);
   // All proposals list — used by ProposalsView (local state for approve/reject mutations)
-  const [allProposals, setAllProposals] = useState(dummyAllProposals);
+  const [allProposals, setAllProposals] = useState([]);
 
   const pendingCount = allProposals.filter((p) => p.status === "AWAITING_APPROVAL").length;
 
   const handleMarkAllRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  }, []);
-
-  // Approve/reject in dummy mode — mutate local state
-  const handleApprove = useCallback((id) => {
-    setAllProposals((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: "APPROVED" } : p))
-    );
-  }, []);
-
-  const handleReject = useCallback((id) => {
-    setAllProposals((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: "REJECTED" } : p))
-    );
   }, []);
 
   const fetchData = useCallback(async () => {
@@ -83,17 +70,18 @@ export default function Home() {
 
         const seen = new Set();
         const pending = [];
+        const all = [];
         for (const entry of feedData.feed || []) {
           if (
             entry.proposal &&
-            !seen.has(entry.proposalId) &&
-            entry.event === "APPROVAL_SENT"
+            !seen.has(entry.proposalId)
           ) {
             seen.add(entry.proposalId);
             try {
               const diffRes = await fetch(`${API_BASE}/diff/${entry.proposalId}`);
               if (diffRes.ok) {
                 const prop = await diffRes.json();
+                all.push(prop);
                 if (prop.status === "AWAITING_APPROVAL") pending.push(prop);
               }
             } catch {
@@ -102,6 +90,7 @@ export default function Home() {
           }
         }
         setProposals(pending);
+        setAllProposals(all);
       }
 
       if (reportRes.ok) {
@@ -116,6 +105,43 @@ export default function Home() {
       console.error("Fetch error:", err);
     }
   }, []);
+
+  // Approve/reject — call backend API, then update local state
+  const handleApprove = useCallback(async (id) => {
+    try {
+      const res = await fetch(`${API_BASE}/approve/${id}?approver=dashboard_user`);
+      if (res.ok) {
+        setAllProposals((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, status: "APPROVED" } : p))
+        );
+        setProposals((prev) => prev.filter((p) => p.id !== id));
+        fetchData();
+      } else {
+        const err = await res.json();
+        console.error("Approve failed:", err);
+      }
+    } catch (err) {
+      console.error("Approve error:", err);
+    }
+  }, [fetchData]);
+
+  const handleReject = useCallback(async (id) => {
+    try {
+      const res = await fetch(`${API_BASE}/reject/${id}?rejector=dashboard_user`);
+      if (res.ok) {
+        setAllProposals((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, status: "REJECTED" } : p))
+        );
+        setProposals((prev) => prev.filter((p) => p.id !== id));
+        fetchData();
+      } else {
+        const err = await res.json();
+        console.error("Reject failed:", err);
+      }
+    } catch (err) {
+      console.error("Reject error:", err);
+    }
+  }, [fetchData]);
 
   useEffect(() => {
     fetchData();

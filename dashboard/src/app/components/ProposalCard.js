@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Check,
   X,
@@ -31,12 +31,22 @@ const statusConfig = {
   PENDING:           { label: "Pending",        color: "#6b7280", bg: "#f9fafb" },
 };
 
-function relTime(iso) {
-  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+function useRelTime(iso) {
+  const [text, setText] = useState("");
+  useEffect(() => {
+    if (!iso) return;
+    const update = () => {
+      const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+      if (diff < 60) setText(`${diff}s ago`);
+      else if (diff < 3600) setText(`${Math.floor(diff / 60)}m ago`);
+      else if (diff < 86400) setText(`${Math.floor(diff / 3600)}h ago`);
+      else setText(`${Math.floor(diff / 86400)}d ago`);
+    };
+    update();
+    const id = setInterval(update, 15000);
+    return () => clearInterval(id);
+  }, [iso]);
+  return text;
 }
 
 // onApprove(id) / onReject(id) when provided triggers dummy mode (no real API call)
@@ -45,6 +55,7 @@ export default function ProposalCard({ proposal, onAction, onApprove, onReject }
   const [loading, setLoading] = useState(false);
   const [doneAction, setDoneAction] = useState(null);
   const [showFiles, setShowFiles] = useState(false);
+  const timeAgo = useRelTime(proposal?.createdAt);
 
   if (!proposal) return null;
 
@@ -104,7 +115,7 @@ export default function ProposalCard({ proposal, onAction, onApprove, onReject }
             {effectiveStatus && statusConfig[effectiveStatus] && (
               <span style={{ background: statusConfig[effectiveStatus].bg, color: statusConfig[effectiveStatus].color, borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>{statusConfig[effectiveStatus].label}</span>
             )}
-            <span style={{ color: "#9ca3af", fontSize: 12 }}>#{proposal.id?.slice(0, 8)} · {proposal.repo}{proposal.createdAt && ` · ${relTime(proposal.createdAt)}`}</span>
+            <span style={{ color: "#9ca3af", fontSize: 12 }}>#{proposal.id?.slice(0, 8)} · {proposal.repo}{timeAgo && ` · ${timeAgo}`}</span>
           </div>
           <h4 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#111827", lineHeight: 1.4 }}>{proposal.ticketTitle || proposal.title}</h4>
         </div>

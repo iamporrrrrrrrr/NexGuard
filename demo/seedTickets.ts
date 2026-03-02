@@ -13,7 +13,19 @@ async function seed() {
     }),
   });
 
-  // Scenario B — RED: high-blast, payment SDK migration
+  // Scenario B — YELLOW: medium-blast, refactor with moderate risk
+  await fetch(`${BASE_URL}/intake`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: "Refactor user authentication middleware",
+      description: "Extract auth logic into a reusable middleware, update 6 route files to use the new auth middleware, add refresh token rotation support",
+      repo: "devguard-org/demo-app",
+      reporter: "dana",
+    }),
+  });
+
+  // Scenario C — RED: high-blast, payment SDK migration
   await fetch(`${BASE_URL}/intake`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
