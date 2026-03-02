@@ -17,10 +17,23 @@ SIMILARITY_THRESHOLD = 0.92
 CHROMA_COLLECTION = "proposals"
 
 client = OpenAI()
-chroma = chromadb.HttpClient(
-    host=os.environ.get("CHROMA_HOST", "localhost"),
-    port=int(os.environ.get("CHROMA_PORT", "8002")),
-)
+_chroma = None
+
+
+def _get_chroma():
+    """Lazy-connect to ChromaDB. Returns client or None if unavailable."""
+    global _chroma
+    if _chroma is not None:
+        return _chroma
+    try:
+        _chroma = chromadb.HttpClient(
+            host=os.environ.get("CHROMA_HOST", "localhost"),
+            port=int(os.environ.get("CHROMA_PORT", "8002")),
+        )
+        return _chroma
+    except Exception as e:
+        print(f"[similarity] ChromaDB unavailable: {e}")
+        return None
 
 
 class ProposalText(BaseModel):
@@ -55,6 +68,10 @@ def check_similarity(body: SimilarityInput) -> SimilarityOutput:
     embedding = _embed(text)
 
     try:
+        chroma = _get_chroma()
+        if chroma is None:
+            return SimilarityOutput(is_duplicate=False, similarity_score=0.0, matched_proposal_id=None)
+
         collection = chroma.get_or_create_collection(
             CHROMA_COLLECTION,
             metadata={"hnsw:space": "cosine"},

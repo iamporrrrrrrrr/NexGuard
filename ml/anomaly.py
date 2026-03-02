@@ -10,14 +10,16 @@ Threshold stored alongside model as models/anomaly_threshold.json
 """
 
 import json
+import os
 import torch
 import torch.nn as nn
 from pydantic import BaseModel
 from openai import OpenAI
 
 EMBEDDING_DIM = 1536
-MODEL_PATH = "models/anomaly_detector.pt"
-THRESHOLD_PATH = "models/anomaly_threshold.json"
+_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(_DIR, "models", "anomaly_detector.pt")
+THRESHOLD_PATH = os.path.join(_DIR, "models", "anomaly_threshold.json")
 
 client = OpenAI()
 
@@ -66,7 +68,6 @@ class Autoencoder(nn.Module):
 
 def load_autoencoder() -> dict | None:
     """Load trained autoencoder weights and threshold from disk. Returns None if not trained yet."""
-    import os
     if not os.path.exists(MODEL_PATH) or not os.path.exists(THRESHOLD_PATH):
         return None
     model = Autoencoder()

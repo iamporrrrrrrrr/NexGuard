@@ -13,13 +13,15 @@ can distinguish added vs removed code (GraphCodeBERT was not trained on raw diff
 Saved model path: models/blast_radius_classifier/
 """
 
+import os
 import torch
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 from pydantic import BaseModel
 from typing import Literal
 
 LABELS = ["GREEN", "YELLOW", "RED"]
-MODEL_DIR = "models/blast_radius_classifier"
+_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(_DIR, "models", "blast_radius_classifier")
 MAX_LENGTH = 512
 
 
@@ -49,14 +51,21 @@ def _preprocess_diff(diff: str) -> str:
     )
 
 
-def load_classifier() -> dict:
-    """Load fine-tuned GraphCodeBERT from MODEL_DIR."""
-    tokenizer = RobertaTokenizer.from_pretrained(MODEL_DIR)
-    model = RobertaForSequenceClassification.from_pretrained(MODEL_DIR)
-    model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-    return {"model": model, "tokenizer": tokenizer, "device": device}
+def load_classifier() -> dict | None:
+    """Load fine-tuned GraphCodeBERT from MODEL_DIR. Returns None if not trained."""
+    if not os.path.isdir(MODEL_DIR) or not os.listdir(MODEL_DIR):
+        print(f"[classify] Model dir '{MODEL_DIR}' not found or empty — classifier disabled")
+        return None
+    try:
+        tokenizer = RobertaTokenizer.from_pretrained(MODEL_DIR)
+        model = RobertaForSequenceClassification.from_pretrained(MODEL_DIR)
+        model.eval()
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
+        return {"model": model, "tokenizer": tokenizer, "device": device}
+    except Exception as e:
+        print(f"[classify] Failed to load classifier: {e}")
+        return None
 
 
 def predict_tier(state: dict, body: ClassifierInput) -> ClassifierOutput:

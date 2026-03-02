@@ -44,6 +44,8 @@ def health():
 
 @app.post("/classify", response_model=ClassifierOutput)
 def classify(body: ClassifierInput):
+    if models.get("classifier") is None:
+        raise HTTPException(status_code=503, detail="Classifier not trained yet")
     return predict_tier(models["classifier"], body)
 
 
