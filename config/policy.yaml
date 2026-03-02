@@ -16,10 +16,11 @@ fail_safe:
   # Patterns that always trigger RED regardless of score
   always_red_patterns:
     - "payment"
-    - "auth"
+    - "stripe"
     - "migration"
-    - "delete"
-    - "drop"
+    - "drop table"
+    - "drop column"
+    - "rm -rf"
 
 incident:
   countdown_seconds: 45

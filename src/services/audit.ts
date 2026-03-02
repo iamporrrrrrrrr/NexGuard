@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { AuditEvent } from "@prisma/client";
+import { AuditEvent, Prisma } from "@prisma/client";
 
 // Append-only audit log writer — never update or delete AuditLog records
 export async function writeAuditLog(
@@ -13,7 +13,9 @@ export async function writeAuditLog(
       event,
       actor,
       proposalId: proposalId ?? null,
-      metadata: metadata ?? null,
+      metadata: metadata
+        ? (metadata as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
     },
   });
 }

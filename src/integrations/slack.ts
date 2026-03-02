@@ -151,7 +151,7 @@ export async function sendApprovalCard(proposalId: string): Promise<void> {
             emoji: true,
           },
           style: "primary",
-          url: `${appUrl}/approve/${proposal.id}?approver=slack_user`,
+          value: proposal.id,
           action_id: "approve_proposal",
         },
         {
@@ -162,7 +162,7 @@ export async function sendApprovalCard(proposalId: string): Promise<void> {
             emoji: true,
           },
           style: "danger",
-          url: `${appUrl}/reject/${proposal.id}?rejector=slack_user`,
+          value: proposal.id,
           action_id: "reject_proposal",
         },
         {

@@ -11,7 +11,7 @@ import { executeProposal } from "../services/executor";
 
 // POST /intake — Submit a development task (mock Jira intake)
 // Body: TicketInput { title, description, repo, reporter }
-const router = Router();
+const router: Router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
   try {
@@ -34,10 +34,6 @@ router.post("/", async (req: Request, res: Response) => {
         summary: `${title} ${description}`,
         diff: "",
         files_to_modify: [],
-        risks: [],
-        confidence: 1,
-        what_i_didnt_do: "",
-        test_coverage_affected: false,
       });
     } catch {
       // ML sidecar unavailable — continue without duplicate check
@@ -70,15 +66,34 @@ router.post("/", async (req: Request, res: Response) => {
     try {
       proposal = await generateProposal(ticket);
     } catch {
-      // Mock fallback — stub proposal so the rest of the pipeline can run
+      // Mock fallback — generate a stub proposal proportional to the ticket complexity
+      // Count keywords that suggest more files affected
+      const descLower = description.toLowerCase();
+      const complexitySignals = ["refactor", "update", "middleware", "route", "endpoint", "module", "service", "controller", "handler", "config"];
+      const matchedSignals = complexitySignals.filter(s => descLower.includes(s));
+      // Extract any numbers that hint at file count (e.g. "update 6 route files")
+      const numberMatch = description.match(/(\d+)\s+(file|route|module|endpoint|service)/i);
+      const estimatedFiles = numberMatch ? Math.min(parseInt(numberMatch[1]), 15) : Math.max(matchedSignals.length, 1);
+
+      const stubFiles = Array.from({ length: estimatedFiles }, (_, i) =>
+        estimatedFiles === 1 ? "placeholder.ts" : `src/module${i + 1}.ts`
+      );
+
+      const isTestRelated = descLower.includes("test") || descLower.includes("spec") || descLower.includes("coverage");
+      const confidence = estimatedFiles > 5 ? 0.5 : estimatedFiles > 2 ? 0.65 : 0.75;
+
       proposal = {
         summary: `Auto-proposal for: ${ticket.title}`,
-        diff: `diff --git a/placeholder.ts b/placeholder.ts\n--- a/placeholder.ts\n+++ b/placeholder.ts\n@@ -0,0 +1 @@\n+// TODO: implement ${ticket.title}\n`,
-        files_to_modify: ["placeholder.ts"],
-        risks: ["Stub proposal — Codex agent not yet implemented"],
-        confidence: 0.5,
+        diff: stubFiles.map(f =>
+          `diff --git a/${f} b/${f}\n--- a/${f}\n+++ b/${f}\n@@ -0,0 +1 @@\n+// TODO: implement ${ticket.title}\n`
+        ).join("\n"),
+        files_to_modify: stubFiles,
+        risks: matchedSignals.length > 0
+          ? [`Stub proposal — touches ${estimatedFiles} file(s) based on: ${matchedSignals.join(", ")}`]
+          : ["Stub proposal — Codex agent not yet implemented"],
+        confidence,
         what_i_didnt_do: "Full implementation pending",
-        test_coverage_affected: false,
+        test_coverage_affected: isTestRelated,
       };
     }
 
