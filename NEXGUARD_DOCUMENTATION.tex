@@ -108,25 +108,29 @@
 }
 
 \title{
-    \Huge\textbf{NexGuard} \\
+    \Huge\textbf{NexGuard} \\ 
+    \vspace{0.5cm}
     \Large Human-Governed AI Coding Agent Orchestration Platform \\
     \vspace{0.5cm}
-    \large Project Documentation
+    \large Project Documentation - DLWeek
 }
-\author{Team NexGuard}
-\date{\today}
+\author{Team PPPPP}
+\date{}
 
 \begin{document}
 
 \maketitle
 \thispagestyle{empty}
 
-\begin{abstract}
-NexGuard is a production-ready platform that intercepts AI-generated code changes, scores their blast radius using machine learning, and routes them through a risk-tiered human approval system. Unlike traditional CI/CD pipelines that act \textit{after} deployment, NexGuard operates \textit{before} code reaches version control, providing human oversight of AI agents during the development phase. This document details our methodology, implementation, testing procedures, and key findings from building a full-stack system that covers the entire Software Development Lifecycle (SDLC): development, testing, deployment, incident response, and governance.
-
+\vspace{0.5cm}
+\begin{center}
+\Large\textbf{Summary}
+\end{center}
 \vspace{0.3cm}
-\noindent\textbf{Keywords:} AI Safety, Code Review, Risk Assessment, Human-in-the-Loop, Machine Learning, GPT-4, CodeBERT, Anomaly Detection
-\end{abstract}
+
+\noindent NexGuard is a production-ready platform that intercepts AI-generated code changes, scores their blast radius using machine learning, and routes them through a risk-tiered human approval system. Unlike traditional CI/CD pipelines that act \textit{after} deployment, NexGuard operates \textit{before} code reaches version control, providing human oversight of AI agents during the development phase. This document details our methodology, implementation, testing procedures, and key findings from building a full-stack system that covers the entire Software Development Lifecycle (SDLC): development, testing, deployment, incident response, and governance.
+
+\vspace{0.5cm}
 
 \newpage
 \tableofcontents
@@ -182,36 +186,42 @@ A complete full-stack platform consisting of:
 \end{itemize}
 
 % ============================================================================
+\newpage
 \section{System Architecture}
 % ============================================================================
 
 \subsection{High-Level Design}
 NexGuard follows a microservices architecture with clear separation of concerns:
-
 \begin{figure}[h!]
-\centering
-\begin{verbatim}
-+------------------------------------------------------------------+
-|                      NexGuard Platform                           |
-|                                                                  |
-|  +----------+     +---------------+     +-----------------+     |
-|  |  Ticket  |---->|  Node.js      |<--->|  Python ML      |     |
-|  |  Input   |     |  Backend      |     |  Sidecar        |     |
-|  | (Jira)   |     |  Port 3000    |     |  Port 8001      |     |
-|  +----------+     +-------+-------+     +-----------------+     |
-|                           |                                      |
-|          +----------------+------------------+                   |
-|          |                |                  |                   |
-|     +----+----+      +----+----+      +------+------+           |
-|     |PostgreSQL|     | Redis  |      |ChromaDB      |           |
-|     |  5433   |      |  6379  |      |(Vector)      |           |
-|     +---------+      +--------+      +-------------+            |
-|                                                                  |
-|     External: OpenAI GPT-4o | GitHub (Octokit) | Slack         |
-+------------------------------------------------------------------+
-\end{verbatim}
-\caption{NexGuard System Architecture}
+    \centering
+    \includegraphics[width=1\linewidth]{Architecture.png}
+    \caption{NexGuard System Architecture}
+    \label{fig:placeholder}
 \end{figure}
+% \begin{figure}[h!]
+% \centering
+% \begin{verbatim}
+% +------------------------------------------------------------------+
+% |                      NexGuard Platform                           |
+% |                                                                  |
+% |  +----------+     +---------------+     +-----------------+     |
+% |  |  Ticket  |---->|  Node.js      |<--->|  Python ML      |     |
+% |  |  Input   |     |  Backend      |     |  Sidecar        |     |
+% |  | (Jira)   |     |  Port 3000    |     |  Port 8001      |     |
+% |  +----------+     +-------+-------+     +-----------------+     |
+% |                           |                                      |
+% |          +----------------+------------------+                   |
+% |          |                |                  |                   |
+% |     +----+----+      +----+----+      +------+------+           |
+% |     |PostgreSQL|     | Redis  |      |ChromaDB      |           |
+% |     |  5433   |      |  6379  |      |(Vector)      |           |
+% |     +---------+      +--------+      +-------------+            |
+% |                                                                  |
+% |     External: OpenAI GPT-4o | GitHub (Octokit) | Slack         |
+% +------------------------------------------------------------------+
+% \end{verbatim}
+% \caption{NexGuard System Architecture}
+% \end{figure}
 
 \subsection{Technology Stack}
 
@@ -331,6 +341,7 @@ NexGuard follows a microservices architecture with clear separation of concerns:
 \end{enumerate}
 
 % ============================================================================
+\newpage
 \section{Implementation Details}
 % ============================================================================
 
@@ -574,6 +585,7 @@ export async function executeProposal(proposalId: string) {
 \end{lstlisting}
 
 % ============================================================================
+\newpage
 \section{Machine Learning Pipeline}
 % ============================================================================
 
@@ -837,6 +849,7 @@ export async function scoreRisk(proposal: CodexProposal) {
 \end{lstlisting}
 
 % ============================================================================
+\newpage
 \section{Testing \& Validation}
 % ============================================================================
 
@@ -1015,6 +1028,7 @@ Tested on 30 duplicate ticket pairs:
 \end{itemize}
 
 % ============================================================================
+\newpage
 \section{Results \& Observations}
 % ============================================================================
 
@@ -1129,140 +1143,7 @@ Tested on 30 duplicate ticket pairs:
 \end{itemize}
 
 % ============================================================================
-\section{Challenges \& Learnings}
-% ============================================================================
-
-\subsection{Technical Challenges}
-
-\subsubsection{1. ML Model Selection}
-\textbf{Challenge:} Finding a model that understands code diffs natively.
-
-\textbf{Attempted:}
-\begin{itemize}
-    \item BERT base --- Poor performance (trained on natural language)
-    \item GPT-3.5 classification --- Too slow and expensive for real-time
-    \item CodeBERT --- Good balance of accuracy and speed
-\end{itemize}
-
-\textbf{Learning:} Domain-specific pre-training (CodeBERT on code) crucial for accuracy.
-
-\textbf{Future:} \texttt{microsoft/codereviewer} (trained on diffs) or \texttt{graphcodebert-base} (data-flow aware) would be better.
-
-\subsubsection{2. Synthetic Training Data Quality}
-\textbf{Challenge:} GPT-4o sometimes generated unrealistic diffs.
-
-\textbf{Issue:} Early training data had syntax errors, invalid patches.
-
-\textbf{Solution:} Added validation pipeline:
-\begin{enumerate}
-    \item Syntax check generated diffs
-    \item Verify patch applies cleanly
-    \item Manual review of 50 samples
-    \item Regenerate invalid examples
-\end{enumerate}
-
-\textbf{Learning:} Synthetic data requires validation --- LLMs hallucinate even on code.
-
-\subsubsection{3. Autoencoder Threshold Tuning}
-\textbf{Challenge:} Balancing false positives vs false negatives.
-
-\textbf{Approach:}
-\begin{itemize}
-    \item Computed reconstruction errors on validation set
-    \item Chose 95th percentile of GREEN errors as threshold
-    \item Prefer false positives (RED $\rightarrow$ human review) over false negatives (malicious code auto-executed)
-\end{itemize}
-
-\textbf{Learning:} In security-critical systems, err on side of caution.
-
-\subsubsection{4. GPT-4o Latency}
-\textbf{Challenge:} Codex generation takes 3.2s, Reviewer adds 2.1s.
-
-\textbf{Impact:} 5.3s just for AI agents (unacceptable for real-time).
-
-\textbf{Attempted Solutions:}
-\begin{itemize}
-    \item Parallel calls --- Not possible (Reviewer depends on Codex)
-    \item Smaller model --- GPT-3.5 lower quality
-    \item Caching --- Works for repeated tickets (80\% hit rate)
-\end{itemize}
-
-\textbf{Learning:} GPT-4o great for quality, not speed. Consider fine-tuned smaller models (Llama 3, Mistral) for production.
-
-\subsubsection{5. Slack Interactive Component Timeouts}
-\textbf{Challenge:} Slack requires response $<$ 3 seconds, but approval transaction takes 1.5s.
-
-\textbf{Solution:}
-\begin{lstlisting}[language=JavaScript]
-router.post("/events", async (req, res) => {
-  res.status(200).json({ ok: true }); // Respond immediately
-  
-  // Process action asynchronously (no await)
-  handleApproval(proposalId, user).catch(console.error);
-});
-\end{lstlisting}
-
-\textbf{Learning:} Webhook handlers must respond immediately, process async.
-
-\subsection{Design Decisions}
-
-\subsubsection{Why Prisma Over Raw SQL?}
-\begin{itemize}
-    \item \textbf{Type Safety:} Catch errors at compile time
-    \item \textbf{Migrations:} Auto-generated, version controlled
-    \item \textbf{Transactions:} Clean API for atomic operations
-    \item \textbf{Trade-off:} Slightly slower than raw SQL (acceptable)
-\end{itemize}
-
-\subsubsection{Why Separate ML Sidecar?}
-\begin{itemize}
-    \item \textbf{Language Isolation:} Python for ML, Node.js for API
-    \item \textbf{Scaling:} ML sidecar can scale independently
-    \item \textbf{Fail-Safe:} If sidecar crashes, backend continues with rules
-\end{itemize}
-
-\subsubsection{Why Append-Only Audit Log?}
-\begin{itemize}
-    \item \textbf{Compliance:} Immutable record for auditors
-    \item \textbf{Debugging:} Full history of every decision
-    \item \textbf{ML Training:} Audit logs become future training data
-\end{itemize}
-
-\subsection{What We Would Change}
-
-\subsubsection{1. Model Selection}
-Replace CodeBERT with \texttt{microsoft/codereviewer}:
-\begin{itemize}
-    \item Trained on 1.3M code reviews
-    \item Natively understands unified diff format
-    \item Better at intent detection
-\end{itemize}
-
-\subsubsection{2. Real Training Data}
-Collect real proposals from production use:
-\begin{itemize}
-    \item Ground truth from human approvals
-    \item Org-specific patterns
-    \item Better than synthetic data
-\end{itemize}
-
-\subsubsection{3. Caching Layer}
-Add Redis cache for:
-\begin{itemize}
-    \item Embeddings (avoid re-computing)
-    \item ML predictions (for identical diffs)
-    \item GPT-4o responses (for repeated queries)
-\end{itemize}
-
-\subsubsection{4. Multi-Repo Support}
-Current limitation: Single repo per deployment
-\begin{itemize}
-    \item Add \texttt{repo\_id} to models
-    \item RAG context scoped per repo
-    \item Per-repo policy configuration
-\end{itemize}
-
-% ============================================================================
+\newpage
 \section{Future Work}
 % ============================================================================
 
@@ -1368,6 +1249,7 @@ Measure AI agent performance:
 \end{itemize}
 
 % ============================================================================
+\newpage
 \section{Conclusion}
 % ============================================================================
 
@@ -1510,13 +1392,8 @@ We envision NexGuard as the \textbf{first step toward safe AI-assisted developme
 
 The code is GPT-4o. The risk scorer is CodeBERT. The final decision is human. \textbf{That's NexGuard.}
 
-% ============================================================================
-\section*{Acknowledgments}
-% ============================================================================
-
-We thank the hackathon organizers for the opportunity to build this project, OpenAI for providing GPT-4o access, and the open-source community for the tools that made this possible: Prisma, FastAPI, PyTorch, HuggingFace Transformers, and many others.
-
-% ============================================================================
+%============================================================================
+\newpage
 \section*{References}
 % ============================================================================
 
@@ -1539,6 +1416,7 @@ We thank the hackathon organizers for the opportunity to build this project, Ope
 \end{enumerate}
 
 % ============================================================================
+\newpage
 \appendix
 \section{Appendix A: File Structure}
 % ============================================================================
@@ -1588,6 +1466,7 @@ nexguard/
 \end{lstlisting}
 
 % ============================================================================
+\newpage
 \section{Appendix B: Environment Setup}
 % ============================================================================
 
@@ -1635,6 +1514,7 @@ cd dashboard && pnpm dev
 \end{lstlisting}
 
 % ============================================================================
+\newpage
 \section{Appendix C: API Documentation}
 % ============================================================================
 
@@ -1697,6 +1577,7 @@ Approve a proposal (Slack button callback).
 \end{lstlisting}
 
 % ============================================================================
+\newpage
 \section{Appendix D: Configuration}
 % ============================================================================
 
