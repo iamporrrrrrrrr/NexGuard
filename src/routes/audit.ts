@@ -11,7 +11,7 @@ interface ProposalRow {
 
 // GET /audit/feed    — Real-time audit log (polled by dashboard)
 // GET /audit/report  — Generate compliance report
-const router: Router  = Router();
+const router: Router = Router();
 
 router.get("/feed", async (req: Request, res: Response) => {
   try {
@@ -19,9 +19,7 @@ router.get("/feed", async (req: Request, res: Response) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
 
     const feed = await prisma.auditLog.findMany({
-      where: since
-        ? { createdAt: { gt: new Date(since) } }
-        : undefined,
+      where: since ? { createdAt: { gt: new Date(since) } } : undefined,
       orderBy: { createdAt: "desc" },
       take: limit,
       include: {
@@ -51,7 +49,12 @@ router.get("/report", async (req: Request, res: Response) => {
     // Fetch all proposals in the reporting window
     const proposals: ProposalRow[] = await prisma.proposal.findMany({
       where: { createdAt: { gte: since } },
-      select: { tier: true, status: true, riskScore: true, failSafeTriggered: true },
+      select: {
+        tier: true,
+        status: true,
+        riskScore: true,
+        failSafeTriggered: true,
+      },
     });
 
     // Fetch audit logs in the reporting window
@@ -69,8 +72,11 @@ router.get("/report", async (req: Request, res: Response) => {
     };
     const byStatus = {
       PENDING: proposals.filter((p) => p.status === "PENDING").length,
-      AUTO_EXECUTED: proposals.filter((p) => p.status === "AUTO_EXECUTED").length,
-      AWAITING_APPROVAL: proposals.filter((p) => p.status === "AWAITING_APPROVAL").length,
+      AUTO_EXECUTED: proposals.filter((p) => p.status === "AUTO_EXECUTED")
+        .length,
+      AWAITING_APPROVAL: proposals.filter(
+        (p) => p.status === "AWAITING_APPROVAL",
+      ).length,
       APPROVED: proposals.filter((p) => p.status === "APPROVED").length,
       REJECTED: proposals.filter((p) => p.status === "REJECTED").length,
       VETOED: proposals.filter((p) => p.status === "VETOED").length,
@@ -79,15 +85,22 @@ router.get("/report", async (req: Request, res: Response) => {
     };
 
     const approvedCount = proposals.filter(
-      (p) => p.status === "APPROVED" || p.status === "EXECUTED" || p.status === "AUTO_EXECUTED"
+      (p) =>
+        p.status === "APPROVED" ||
+        p.status === "EXECUTED" ||
+        p.status === "AUTO_EXECUTED",
     ).length;
-    const rejectedCount = proposals.filter((p) => p.status === "REJECTED").length;
+    const rejectedCount = proposals.filter(
+      (p) => p.status === "REJECTED",
+    ).length;
     const decidedCount = approvedCount + rejectedCount;
     const approvalRate = decidedCount > 0 ? approvedCount / decidedCount : null;
 
     const avgRiskScore =
       totalProposals > 0
-        ? Math.round(proposals.reduce((sum, p) => sum + p.riskScore, 0) / totalProposals)
+        ? Math.round(
+            proposals.reduce((sum, p) => sum + p.riskScore, 0) / totalProposals,
+          )
         : null;
 
     const failSafeCount = proposals.filter((p) => p.failSafeTriggered).length;
@@ -102,7 +115,8 @@ router.get("/report", async (req: Request, res: Response) => {
         totalProposals,
         byTier,
         byStatus,
-        approvalRate: approvalRate !== null ? `${(approvalRate * 100).toFixed(1)}%` : "N/A",
+        approvalRate:
+          approvalRate !== null ? `${(approvalRate * 100).toFixed(1)}%` : "N/A",
         avgRiskScore,
         failSafeTriggered: failSafeCount,
       },

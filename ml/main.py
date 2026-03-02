@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from classify import ClassifierInput, ClassifierOutput, load_classifier, predict_tier
@@ -33,8 +33,8 @@ app = FastAPI(title="DevGuard ML Sidecar", version="1.0.0", lifespan=lifespan)
 def health():
     return {
         "status": "ok",
-        "classifier_loaded": "classifier" in models,
-        "autoencoder_loaded": "autoencoder" in models,
+        "classifier_loaded": models.get("classifier") is not None,
+        "autoencoder_loaded": models.get("autoencoder") is not None,
     }
 
 
@@ -53,6 +53,8 @@ def classify(body: ClassifierInput):
 
 @app.post("/anomaly", response_model=AnomalyOutput)
 def anomaly(body: AnomalyInput):
+    if models.get("autoencoder") is None:
+        raise HTTPException(status_code=503, detail="Autoencoder not trained yet")
     return detect_anomaly(models["autoencoder"], body)
 
 

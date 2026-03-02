@@ -8,6 +8,7 @@ used by the RAG agent). No saved model — computed at runtime.
 Threshold: 0.92 similarity score.
 """
 
+import os
 import chromadb
 from openai import OpenAI
 from pydantic import BaseModel
@@ -16,7 +17,10 @@ SIMILARITY_THRESHOLD = 0.92
 CHROMA_COLLECTION = "proposals"
 
 client = OpenAI()
-chroma = chromadb.PersistentClient(path="../chroma_db")
+chroma = chromadb.HttpClient(
+    host=os.environ.get("CHROMA_HOST", "localhost"),
+    port=int(os.environ.get("CHROMA_PORT", "8002")),
+)
 
 
 class ProposalText(BaseModel):
@@ -36,23 +40,48 @@ class SimilarityOutput(BaseModel):
 
 
 def _embed(text: str) -> list[float]:
-    """
-    TODO:
-    1. Call OpenAI embeddings API with text-embedding-3-small
-    2. Return embedding vector
-    """
-    raise NotImplementedError
+    """Embed text using text-embedding-3-small."""
+    response = client.embeddings.create(model="text-embedding-3-small", input=text)
+    return response.data[0].embedding
 
 
 def check_similarity(body: SimilarityInput) -> SimilarityOutput:
-    """
-    TODO:
-    1. Build text from proposal (summary + files + diff[:2000])
-    2. Embed via _embed()
-    3. Query ChromaDB collection for top-1 nearest neighbor
-    4. ChromaDB returns distance (L2) — convert to cosine similarity
-       OR use cosine distance directly: similarity = 1 - distance (if normalized)
-    5. If similarity >= SIMILARITY_THRESHOLD → is_duplicate = True
-    6. Return SimilarityOutput with matched_proposal_id from metadata
-    """
-    raise NotImplementedError
+    """Check if the proposal is a near-duplicate of any stored proposal."""
+    text = (
+        f"{body.proposal.summary}\n"
+        f"{', '.join(body.proposal.files_to_modify)}\n"
+        f"{body.proposal.diff[:2000]}"
+    )
+    embedding = _embed(text)
+
+    try:
+        collection = chroma.get_or_create_collection(
+            CHROMA_COLLECTION,
+            metadata={"hnsw:space": "cosine"},
+        )
+        if collection.count() == 0:
+            return SimilarityOutput(is_duplicate=False, similarity_score=0.0, matched_proposal_id=None)
+
+        results = collection.query(
+            query_embeddings=[embedding],
+            n_results=1,
+            include=["distances", "ids"],
+        )
+
+        if not results["ids"][0]:
+            return SimilarityOutput(is_duplicate=False, similarity_score=0.0, matched_proposal_id=None)
+
+        # ChromaDB cosine distance: 0 = identical, 1 = orthogonal → similarity = 1 - distance
+        distance = float(results["distances"][0][0])
+        similarity = 1.0 - distance
+        matched_id = results["ids"][0][0]
+
+        return SimilarityOutput(
+            is_duplicate=similarity >= SIMILARITY_THRESHOLD,
+            similarity_score=similarity,
+            matched_proposal_id=matched_id if similarity >= SIMILARITY_THRESHOLD else None,
+        )
+
+    except Exception as e:
+        print(f"[similarity] ChromaDB error: {e}")
+        return SimilarityOutput(is_duplicate=False, similarity_score=0.0, matched_proposal_id=None)

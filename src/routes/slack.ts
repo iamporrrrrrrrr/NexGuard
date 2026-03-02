@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import axios from "axios";
 import * as crypto from "crypto";
+import { executeHotfix, executeProposal } from "../services/executor";
 
 // POST /slack/events — Slack interactive component callback
 const router: Router = Router();
@@ -11,7 +12,7 @@ function verifySlackSignature(
   signingSecret: string,
   requestSignature: string,
   timestamp: string,
-  body: string
+  body: string,
 ): boolean {
   // Slack signature verification
   const time = Math.floor(Date.now() / 1000);
@@ -23,11 +24,14 @@ function verifySlackSignature(
   const sigBasestring = `v0:${timestamp}:${body}`;
   const mySignature =
     "v0=" +
-    crypto.createHmac("sha256", signingSecret).update(sigBasestring).digest("hex");
+    crypto
+      .createHmac("sha256", signingSecret)
+      .update(sigBasestring)
+      .digest("hex");
 
   return crypto.timingSafeEqual(
     Buffer.from(mySignature, "utf8"),
-    Buffer.from(requestSignature, "utf8")
+    Buffer.from(requestSignature, "utf8"),
   );
 }
 
@@ -38,7 +42,7 @@ router.post("/events", async (req: Request, res: Response) => {
 
     // Parse Slack payload (url-encoded JSON)
     const payload = JSON.parse(req.body.payload || "{}");
-    
+
     // Slack sends a URL verification challenge on first setup
     if (payload.type === "url_verification") {
       return res.status(200).json({ challenge: payload.challenge });
@@ -79,8 +83,12 @@ router.post("/events", async (req: Request, res: Response) => {
       case "apply_hotfix": {
         const hotfixId = action.value;
         if (hotfixId) {
-          // TODO: Implement hotfix application
-          console.log(`Hotfix ${hotfixId} application requested by ${user}`);
+          executeHotfix(hotfixId, user).catch((err) =>
+            console.error(
+              `[slack] executeHotfix ${hotfixId} failed:`,
+              (err as Error).message,
+            ),
+          );
         }
         break;
       }
@@ -107,7 +115,7 @@ async function updateSlackMessage(
   originalMessage: any,
   emoji: string,
   statusText: string,
-  user: string
+  user: string,
 ): Promise<void> {
   if (!responseUrl) return;
   try {
@@ -136,13 +144,29 @@ async function updateSlackMessage(
 }
 
 // Handle approval action
-async function handleApproval(proposalId: string, approver: string, responseUrl?: string, originalMessage?: any): Promise<void> {
+async function handleApproval(
+  proposalId: string,
+  approver: string,
+  responseUrl?: string,
+  originalMessage?: any,
+): Promise<void> {
   try {
     // Check if already handled (URL button may have fired first)
-    const existing = await prisma.proposal.findUnique({ where: { id: proposalId }, select: { status: true, ticketTitle: true } });
+    const existing = await prisma.proposal.findUnique({
+      where: { id: proposalId },
+      select: { status: true, ticketTitle: true },
+    });
     if (!existing || existing.status !== "AWAITING_APPROVAL") {
-      console.log(`Proposal ${proposalId} already ${existing?.status ?? "gone"} — skipping Slack handler`);
-      await updateSlackMessage(responseUrl, originalMessage, "✅", `Already ${existing?.status?.toLowerCase().replace(/_/g, " ") ?? "handled"}`, approver);
+      console.log(
+        `Proposal ${proposalId} already ${existing?.status ?? "gone"} — skipping Slack handler`,
+      );
+      await updateSlackMessage(
+        responseUrl,
+        originalMessage,
+        "✅",
+        `Already ${existing?.status?.toLowerCase().replace(/_/g, " ") ?? "handled"}`,
+        approver,
+      );
       return;
     }
 
@@ -173,21 +197,49 @@ async function handleApproval(proposalId: string, approver: string, responseUrl?
       return { approval, proposal };
     });
 
-    await updateSlackMessage(responseUrl, originalMessage, "✅", "Approved", approver);
+    await updateSlackMessage(
+      responseUrl,
+      originalMessage,
+      "✅",
+      "Approved",
+      approver,
+    );
     console.log(`✓ Proposal ${proposalId} approved by ${approver} via Slack`);
+    executeProposal(proposalId).catch((err) =>
+      console.error(
+        `[slack] executeProposal ${proposalId} failed:`,
+        (err as Error).message,
+      ),
+    );
   } catch (error) {
     console.error(`Failed to approve proposal ${proposalId}:`, error);
   }
 }
 
 // Handle rejection action
-async function handleRejection(proposalId: string, rejector: string, responseUrl?: string, originalMessage?: any): Promise<void> {
+async function handleRejection(
+  proposalId: string,
+  rejector: string,
+  responseUrl?: string,
+  originalMessage?: any,
+): Promise<void> {
   try {
     // Check if already handled (URL button may have fired first)
-    const existing = await prisma.proposal.findUnique({ where: { id: proposalId }, select: { status: true, ticketTitle: true } });
+    const existing = await prisma.proposal.findUnique({
+      where: { id: proposalId },
+      select: { status: true, ticketTitle: true },
+    });
     if (!existing || existing.status !== "AWAITING_APPROVAL") {
-      console.log(`Proposal ${proposalId} already ${existing?.status ?? "gone"} — skipping Slack handler`);
-      await updateSlackMessage(responseUrl, originalMessage, "⚠️", `Already ${existing?.status?.toLowerCase().replace(/_/g, " ") ?? "handled"}`, rejector);
+      console.log(
+        `Proposal ${proposalId} already ${existing?.status ?? "gone"} — skipping Slack handler`,
+      );
+      await updateSlackMessage(
+        responseUrl,
+        originalMessage,
+        "⚠️",
+        `Already ${existing?.status?.toLowerCase().replace(/_/g, " ") ?? "handled"}`,
+        rejector,
+      );
       return;
     }
 
@@ -218,7 +270,13 @@ async function handleRejection(proposalId: string, rejector: string, responseUrl
       return { approval, proposal };
     });
 
-    await updateSlackMessage(responseUrl, originalMessage, "🚫", "Rejected", rejector);
+    await updateSlackMessage(
+      responseUrl,
+      originalMessage,
+      "🚫",
+      "Rejected",
+      rejector,
+    );
     console.log(`✓ Proposal ${proposalId} rejected by ${rejector} via Slack`);
   } catch (error) {
     console.error(`Failed to reject proposal ${proposalId}:`, error);

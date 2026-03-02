@@ -1,4 +1,9 @@
-import express, { Request, Response, NextFunction, type Express } from "express";
+import express, {
+  Request,
+  Response,
+  NextFunction,
+  type Express,
+} from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
@@ -15,7 +20,7 @@ const PORT = process.env.PORT ?? 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // For Slack payloads
+app.use(express.urlencoded({ extended: true })); // required for Slack payloads
 
 // Mount routes
 app.use("/intake", intakeRouter);
