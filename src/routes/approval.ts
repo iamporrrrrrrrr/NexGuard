@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { executeProposal, executeHotfix } from "../services/executor";
 
 // GET /approve/:id  — Approve a proposal (Slack button callback)
 // GET /reject/:id   — Reject a proposal (Slack button callback)
@@ -61,27 +62,16 @@ router.get("/approve/:id", async (req: Request, res: Response) => {
       return { approval, proposal: updatedProposal };
     });
 
-    // TODO: Trigger executor to apply diff and open PR (when executor is implemented)
-    // try {
-    //   const { prUrl } = await executeProposal(id);
-    //   return res.status(200).json({
-    //     success: true,
-    //     message: "Proposal approved and PR created",
-    //     proposalId: id,
-    //     prUrl,
-    //   });
-    // } catch (execError) {
-    //   console.error("Executor failed:", execError);
-    //   // Approval is recorded, but execution failed
-    // }
+    // Fire-and-forget: execute the proposal (create branch + apply diff + open PR)
+    executeProposal(id).catch((execErr) =>
+      console.error("[approval] executeProposal failed:", (execErr as Error).message)
+    );
 
     res.status(200).json({
       success: true,
-      message: "Proposal approved successfully",
+      message: "Proposal approved — executing diff and opening PR",
       proposalId: id,
       approver,
-      proposal: result.proposal,
-      note: "Executor not yet implemented - PR creation pending",
     });
   } catch (error) {
     console.error("Error approving proposal:", error);
@@ -203,6 +193,20 @@ router.get("/diff/:id", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error fetching diff:", error);
     res.status(500).json({ error: "Failed to fetch diff" });
+  }
+});
+
+// POST /hotfix/:id/apply — Apply a selected hotfix (Slack button callback)
+router.get("/hotfix/:id/apply", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const actor = (req.query.actor as string) ?? "unknown";
+  try {
+    executeHotfix(id, actor).catch((err) =>
+      console.error("[approval] executeHotfix failed:", (err as Error).message)
+    );
+    res.json({ ok: true, hotfixId: id, actor });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

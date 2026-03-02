@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { executeProposal, executeHotfix } from "../services/executor";
 import * as crypto from "crypto";
 
 // POST /slack/events — Slack interactive component callback
@@ -76,8 +77,9 @@ router.post("/events", async (req: Request, res: Response) => {
       case "apply_hotfix": {
         const hotfixId = action.value;
         if (hotfixId) {
-          // TODO: Implement hotfix application
-          console.log(`Hotfix ${hotfixId} application requested by ${user}`);
+          executeHotfix(hotfixId, user).catch((err) =>
+            console.error(`[slack] executeHotfix ${hotfixId} failed:`, (err as Error).message)
+          );
         }
         break;
       }
@@ -129,6 +131,9 @@ async function handleApproval(proposalId: string, approver: string): Promise<voi
     });
 
     console.log(`✓ Proposal ${proposalId} approved by ${approver} via Slack`);
+    executeProposal(proposalId).catch((err) =>
+      console.error(`[slack] executeProposal ${proposalId} failed:`, (err as Error).message)
+    );
   } catch (error) {
     console.error(`Failed to approve proposal ${proposalId}:`, error);
   }

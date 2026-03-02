@@ -65,39 +65,43 @@ class Autoencoder(nn.Module):
 
 
 def load_autoencoder() -> dict:
-    """
-    Load trained autoencoder weights and threshold from disk.
-
-    TODO:
-    1. Instantiate Autoencoder()
-    2. Load state dict from MODEL_PATH
-    3. model.eval()
-    4. Load threshold float from THRESHOLD_PATH
-    5. Return {"model": model, "threshold": threshold}
-    """
-    raise NotImplementedError
+    """Load trained autoencoder weights and threshold from disk."""
+    model = Autoencoder()
+    model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
+    model.eval()
+    with open(THRESHOLD_PATH) as f:
+        threshold = float(json.load(f)["threshold"])
+    return {"model": model, "threshold": threshold}
 
 
 def _embed_proposal(proposal: ProposalText) -> list[float]:
-    """
-    Embed proposal text using text-embedding-3-small.
-
-    TODO:
-    1. Concatenate summary + file list + first 2000 chars of diff
-    2. Call client.embeddings.create(model="text-embedding-3-small", input=text)
-    3. Return embedding vector (list of 1536 floats)
-    """
-    raise NotImplementedError
+    """Embed proposal text using text-embedding-3-small."""
+    text = (
+        f"{proposal.summary}\n"
+        f"Files: {', '.join(proposal.files_to_modify)}\n"
+        f"{proposal.diff[:2000]}"
+    )
+    response = client.embeddings.create(model="text-embedding-3-small", input=text)
+    return response.data[0].embedding
 
 
 def detect_anomaly(state: dict, body: AnomalyInput) -> AnomalyOutput:
-    """
-    TODO:
-    1. Embed the proposal via _embed_proposal
-    2. Convert to torch.Tensor, forward pass through autoencoder
-    3. Compute MSE reconstruction error
-    4. anomaly_score = reconstruction_error / threshold
-    5. is_anomaly = reconstruction_error > threshold
-    6. Return AnomalyOutput
-    """
-    raise NotImplementedError
+    """Score reconstruction error against the trained threshold."""
+    embedding = _embed_proposal(body.proposal)
+    tensor = torch.tensor(embedding, dtype=torch.float32).unsqueeze(0)
+
+    model = state["model"]
+    threshold = state["threshold"]
+
+    with torch.no_grad():
+        reconstructed = model(tensor)
+
+    error = float(nn.functional.mse_loss(reconstructed, tensor).item())
+    score = error / threshold if threshold > 0 else 0.0
+
+    return AnomalyOutput(
+        is_anomaly=error > threshold,
+        reconstruction_error=error,
+        anomaly_score=score,
+        threshold=threshold,
+    )

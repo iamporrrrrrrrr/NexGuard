@@ -31,43 +31,75 @@ LR = 1e-3
 
 
 def fetch_green_embeddings() -> list[list[float]]:
-    """
-    TODO:
-    1. Connect to ChromaDB (PersistentClient)
-    2. Get the proposals collection
-    3. Query all documents where metadata.tier == "GREEN"
-    4. Return list of embedding vectors
-    """
-    raise NotImplementedError
+    """Fetch embeddings of all GREEN-tier proposals from ChromaDB."""
+    chroma_dir = os.environ.get("CHROMA_PERSIST_DIR", "../chroma_db")
+    client = chromadb.PersistentClient(path=chroma_dir)
+    try:
+        collection = client.get_collection(CHROMA_COLLECTION)
+    except Exception:
+        print(f"Collection '{CHROMA_COLLECTION}' not found. Run the intake pipeline first to populate proposals.")
+        return []
+
+    results = collection.get(where={"tier": "GREEN"}, include=["embeddings"])
+    embeddings = results.get("embeddings") or []
+    print(f"Fetched {len(embeddings)} GREEN embeddings from ChromaDB")
+    return embeddings
 
 
 def compute_threshold(model: nn.Module, embeddings: torch.Tensor) -> float:
-    """
-    TODO:
-    1. Run all embeddings through autoencoder (no_grad)
-    2. Compute per-sample MSE reconstruction error
-    3. Return 95th percentile as the anomaly threshold
-    """
-    raise NotImplementedError
+    """Compute 95th-percentile reconstruction error as the anomaly threshold."""
+    model.eval()
+    errors = []
+    with torch.no_grad():
+        for i in range(0, len(embeddings), BATCH_SIZE):
+            batch = embeddings[i : i + BATCH_SIZE]
+            reconstructed = model(batch)
+            mse = nn.functional.mse_loss(reconstructed, batch, reduction="none").mean(dim=1)
+            errors.extend(mse.tolist())
+
+    errors.sort()
+    threshold = errors[int(len(errors) * 0.95)]
+    print(f"95th-percentile reconstruction error (threshold): {threshold:.6f}")
+    return threshold
 
 
 def train():
-    """
-    TODO:
-    1. Fetch GREEN embeddings via fetch_green_embeddings()
-    2. Convert to torch.Tensor
-    3. Create TensorDataset + DataLoader
-    4. Instantiate Autoencoder, MSELoss, Adam optimizer
-    5. Training loop:
-       - Forward pass → reconstruct
-       - MSE loss between input and reconstruction
-       - Backward + step
-       - Print epoch loss
-    6. Compute threshold via compute_threshold()
-    7. Save model state dict to MODEL_PATH
-    8. Save threshold as JSON to THRESHOLD_PATH
-    """
-    raise NotImplementedError
+    embeddings_raw = fetch_green_embeddings()
+    if len(embeddings_raw) < 10:
+        print(f"Only {len(embeddings_raw)} GREEN embeddings found — need at least 10. Exiting.")
+        return
+
+    embeddings = torch.tensor(embeddings_raw, dtype=torch.float32)
+    dataset = TensorDataset(embeddings)
+    loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+    model = Autoencoder(EMBEDDING_DIM)
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+
+    print(f"Training autoencoder on {len(embeddings)} samples for {EPOCHS} epochs...")
+    for epoch in range(EPOCHS):
+        model.train()
+        total_loss = 0.0
+        for (batch,) in loader:
+            reconstructed = model(batch)
+            loss = criterion(reconstructed, batch)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+
+        if (epoch + 1) % 10 == 0 or epoch == 0:
+            print(f"Epoch {epoch + 1}/{EPOCHS} | loss={total_loss / len(loader):.6f}")
+
+    threshold = compute_threshold(model, embeddings)
+
+    torch.save(model.state_dict(), MODEL_PATH)
+    with open(THRESHOLD_PATH, "w") as f:
+        json.dump({"threshold": threshold}, f)
+
+    print(f"\n✓ Autoencoder saved to {MODEL_PATH}")
+    print(f"✓ Threshold ({threshold:.6f}) saved to {THRESHOLD_PATH}")
 
 
 if __name__ == "__main__":

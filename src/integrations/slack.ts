@@ -193,11 +193,80 @@ export async function sendApprovalCard(proposalId: string): Promise<void> {
 
 // Send a hotfix selection card to Slack (incident mode)
 export async function sendHotfixCard(incidentId: string): Promise<void> {
-  // TODO:
-  // 1. Fetch incident + hotfix candidates from prisma
-  // 2. Build Slack Block Kit message with ranked hotfix options
-  // 3. POST to SLACK_WEBHOOK_URL
-  throw new Error("Not implemented");
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  const appUrl = process.env.DEVGUARD_APP_URL || "http://localhost:3000";
+
+  if (!webhookUrl) {
+    console.warn("SLACK_WEBHOOK_URL not configured. Skipping hotfix card for incident:", incidentId);
+    return;
+  }
+
+  try {
+    const incident = await prisma.incident.findUnique({
+      where: { id: incidentId },
+      include: { hotfixes: { orderBy: { confidence: "desc" } } },
+    });
+
+    if (!incident) throw new Error(`Incident ${incidentId} not found`);
+
+    const blastEmoji: Record<string, string> = {
+      LOW: ":white_circle:",
+      MEDIUM: ":large_yellow_circle:",
+      HIGH: ":red_circle:",
+    };
+
+    const blocks: any[] = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: ":rotating_light: Incident — Hotfix Candidates Ready", emoji: true },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Incident:* ${incident.description}\n*Repo:* \`${incident.repo}\` | *Reporter:* ${incident.reporter}`,
+        },
+      },
+      { type: "divider" },
+    ];
+
+    for (let i = 0; i < incident.hotfixes.length; i++) {
+      const hf = incident.hotfixes[i];
+      const emoji = blastEmoji[hf.blastRadius] ?? ":white_circle:";
+      blocks.push(
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*#${i + 1}* ${emoji} ${hf.summary}\nConfidence: *${(hf.confidence * 100).toFixed(0)}%* | Blast: *${hf.blastRadius}*`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: { type: "plain_text", text: `Apply Hotfix #${i + 1}`, emoji: true },
+              ...(i === 0 ? { style: "primary" } : {}),
+              url: `${appUrl}/hotfix/${hf.id}/apply?actor=slack_user`,
+              action_id: "apply_hotfix",
+              value: hf.id,
+            },
+          ],
+        },
+        { type: "divider" }
+      );
+    }
+
+    await axios.post(webhookUrl, {
+      blocks,
+      text: `Incident: ${incident.description} — ${incident.hotfixes.length} hotfix candidate(s) ready`,
+    });
+
+    console.log(`✓ Hotfix card sent to Slack for incident ${incidentId}`);
+  } catch (error) {
+    console.error("Failed to send hotfix card:", error);
+  }
 }
 
 // Send a plain notification to Slack
