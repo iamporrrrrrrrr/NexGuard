@@ -128,7 +128,7 @@
 \end{center}
 \vspace{0.3cm}
 
-\noindent NexGuard is a production-ready platform that intercepts AI-generated code changes, scores their blast radius using machine learning, and routes them through a risk-tiered human approval system. Unlike traditional CI/CD pipelines that act \textit{after} deployment, NexGuard operates \textit{before} code reaches version control, providing human oversight of AI agents during the development phase. This document details our methodology, implementation, testing procedures, and key findings from building a full-stack system that covers the entire Software Development Lifecycle (SDLC): development, testing, deployment, incident response, and governance.
+\noindent NexGuard is a production-ready platform that intercepts AI-generated code changes, scores their blast radius using machine learning, and routes them through a risk-tiered human approval system. Unlike traditional CI/CD pipelines that act \textit{after} deployment, NexGuard operates \textit{before} code reaches version control, providing human oversight of AI agents during the development phase. This document details our methodology, implementation, and testing procedures from building a full-stack system that covers the entire Software Development Lifecycle (SDLC): development, testing, deployment, incident response, and governance.
 
 \vspace{0.5cm}
 
@@ -166,8 +166,9 @@ High-risk changes (authentication, database migrations, production config) requi
 \end{tcolorbox}
 
 \subsection{Key Innovation}
-We combine \textbf{three ML models} (CodeBERT classifier, autoencoder anomaly detector, cosine similarity) with \textbf{three GPT-4o agents} (code generation, review, documentation) to create a defense-in-depth system where:
+We combine \textbf{three ML models} (CodeBERT classifier, autoencoder anomaly detector, cosine similarity) with \textbf{three GPT-4o agents} (code generation, review, documentation) and \textbf{Jira Cloud integration} to create a defense-in-depth system where:
 \begin{enumerate}
+    \item \textbf{Issues flow from Jira} → NexGuard webhook → risk scoring pipeline
     \item \textbf{AI generates} proposals with full context from RAG (Retrieval-Augmented Generation)
     \item \textbf{ML scores} blast radius using fine-tuned CodeBERT and anomaly detection
     \item \textbf{Humans approve} anything risky through Slack interactive cards
@@ -177,12 +178,16 @@ We combine \textbf{three ML models} (CodeBERT classifier, autoencoder anomaly de
 \subsection{What We Built}
 A complete full-stack platform consisting of:
 \begin{itemize}
-    \item \textbf{Node.js Backend} (TypeScript + Express) with 5 route handlers, 5 AI agents, 3 services
+    \item \textbf{Node.js Backend} (TypeScript + Express) with 15 REST endpoints, 5 AI agents, 3 services
+    \item \textbf{Jira Cloud Integration} via webhooks with ADF text extraction and smart repo mapping
     \item \textbf{Python ML Sidecar} (FastAPI) with 3 trained models (classifier, autoencoder, similarity)
     \item \textbf{Next.js Dashboard} with real-time audit feed and approval interface
     \item \textbf{Slack Integration} with Block Kit approval cards and interactive components
     \item \textbf{PostgreSQL + Redis + ChromaDB} for data persistence and vector search
     \item \textbf{GitHub Integration} via Octokit for branch creation and PR management
+    \item \textbf{Policy-Driven Governance} with YAML config for risk thresholds and fail-safe patterns
+    \item \textbf{Compliance Reporting} with aggregate statistics and audit trail exports
+    \item \textbf{Incident Management} with 45s hotfix generation and emergency PR workflow
 \end{itemize}
 
 % ============================================================================
@@ -230,8 +235,9 @@ NexGuard follows a microservices architecture with clear separation of concerns:
     \item \textbf{Runtime:} Node.js 20+ with TypeScript 5.0
     \item \textbf{Web Framework:} Express.js 4.18
     \item \textbf{ORM:} Prisma 5.0 (type-safe database client)
-    \item \textbf{Queue:} BullMQ 4.0 + Redis 7 (job scheduling)
+    \item \textbf{Cache:} Redis 7 (session storage, planned: job queue with BullMQ)
     \item \textbf{Vector DB:} ChromaDB 1.5 (RAG embeddings)
+    \item \textbf{Config:} YAML-based policy file (risk thresholds, fail-safe patterns)
 \end{itemize}
 
 \subsubsection{ML Sidecar (Python)}
@@ -247,6 +253,7 @@ NexGuard follows a microservices architecture with clear separation of concerns:
 \begin{itemize}
     \item \textbf{Dashboard:} Next.js 14 with React 18
     \item \textbf{Database:} PostgreSQL 15 (primary data store)
+    \item \textbf{Issue Tracker:} Jira Cloud (webhook integration, ADF parsing)
     \item \textbf{Notifications:} Slack Webhooks + Interactive Components
     \item \textbf{Version Control:} GitHub via Octokit REST API
     \item \textbf{AI:} OpenAI API (GPT-4o for agents)
@@ -261,8 +268,13 @@ NexGuard follows a microservices architecture with clear separation of concerns:
 \toprule
 \textbf{Endpoint} & \textbf{Method} & \textbf{Purpose} \\
 \midrule
-\texttt{/intake} & POST & Submit development ticket \\
+\texttt{/intake} & POST & Submit development ticket (direct) \\
+\texttt{/intake/jira} & POST & Accept Jira webhook payloads \\
 \texttt{/incident} & POST & Declare production incident \\
+\texttt{/incident} & GET & List all incidents with hotfixes \\
+\texttt{/incident/:id} & GET & Get single incident details \\
+\texttt{/incident/:id/apply/:hotfixId} & POST & Apply a hotfix (creates PR) \\
+\texttt{/incident/:id/resolve} & POST & Manually resolve an incident \\
 \texttt{/approve/:id} & GET & Approve proposal (Slack callback) \\
 \texttt{/reject/:id} & GET & Reject proposal (Slack callback) \\
 \texttt{/veto/:id} & GET & Veto YELLOW-tier auto-execution \\
@@ -291,7 +303,8 @@ NexGuard follows a microservices architecture with clear separation of concerns:
         \item Queries ChromaDB for similar past proposals
         \item Provides context to Codex for better generation
     \end{itemize}
-    
+
+    \newpage
     \item \textbf{Reviewer Agent} (\texttt{agents/reviewer.ts})
     \begin{itemize}
         \item Second independent GPT-4o pass on proposal
@@ -308,9 +321,29 @@ NexGuard follows a microservices architecture with clear separation of concerns:
     
     \item \textbf{Communication Agent} (\texttt{agents/communication.ts})
     \begin{itemize}
-        \item Generates PR descriptions from audit trail
-        \item Creates incident postmortems with timeline
-        \item Produces release changelogs grouped by category
+        \item Always reads from AuditLog (append-only truth)
+        \item \textbf{generatePRDescription()} --- Creates PR descriptions with:
+        \begin{itemize}
+            \item Summary of changes and rationale
+            \item Risk assessment with reviewer notes
+            \item Audit trail of approval flow
+            \item Testing recommendations
+        \end{itemize}
+        \item \textbf{generatePostmortem()} --- Creates incident postmortems with:
+        \begin{itemize}
+            \item Timeline of events from audit logs
+            \item Root cause analysis
+            \item Hotfixes evaluated and applied
+            \item Action items for prevention
+            \item Lessons learned (blame-free)
+        \end{itemize}
+        \item \textbf{generateChangelog()} --- Produces release changelogs:
+        \begin{itemize}
+            \item Groups proposals by category (Features, Fixes, Breaking Changes)
+            \item User-friendly language
+            \item Date ranges and risk tiers
+            \item Only includes EXECUTED proposals
+        \end{itemize}
     \end{itemize}
 \end{enumerate}
 
@@ -394,7 +427,8 @@ if (mlResult.confidence >= 0.8) {
   tier = rulesBasedTier(codexOutput); // Fallback
 }
     \end{lstlisting}
-    
+
+    \newpage
     \item \textbf{Reviewer Second Pass}
     \begin{lstlisting}[language=JavaScript,caption=Reviewer Agent]
 const reviewerScore = await reviewProposal(codexOutput);
@@ -413,6 +447,80 @@ if (tier === "GREEN") {
 }
     \end{lstlisting}
 \end{enumerate}
+
+\subsection{Veto Window for YELLOW Tier}
+
+\subsubsection{Motivation}
+YELLOW-tier proposals auto-execute after notification, but teams need a safety mechanism to halt execution if they spot issues. The \textbf{veto window} provides this escape hatch.
+
+\subsubsection{Veto Workflow}
+\begin{enumerate}[leftmargin=*]
+    \item YELLOW proposal auto-executes $\rightarrow$ PR created
+    \item Slack notification sent with veto link
+    \item Within policy-defined window (default: 1 hour), engineers can veto
+    \item Veto marks proposal as VETOED + closes PR (if not merged)
+    \item After window expires, veto is no longer allowed
+\end{enumerate}
+
+\newpage
+\begin{lstlisting}[language=JavaScript,caption=Veto Endpoint (approval.ts)]
+router.get("/veto/:id", async (req, res) => {
+  const { id } = req.params;
+  const vetoer = req.query.vetoer || "unknown";
+  
+  const proposal = await prisma.proposal.findUnique({ where: { id } });
+  
+  // Validate: only AUTO_EXECUTED YELLOW can be vetoed
+  if (proposal.status !== "AUTO_EXECUTED") {
+    return res.status(400).json({ 
+      error: "Proposal cannot be vetoed" 
+    });
+  }
+  if (proposal.tier !== "YELLOW") {
+    return res.status(400).json({ 
+      error: "Only YELLOW-tier proposals can be vetoed" 
+    });
+  }
+  
+  // Check veto window from policy.yaml
+  const policy = getPolicy();
+  const vetoWindowHours = policy.risk.yellow.veto_window_hours;
+  const elapsedMs = Date.now() - proposal.createdAt.getTime();
+  const vetoWindowMs = vetoWindowHours * 3600000;
+  
+  if (elapsedMs > vetoWindowMs) {
+    return res.status(400).json({ 
+      error: `Veto window expired (${vetoWindowHours}h)` 
+    });
+  }
+  
+  // Atomically: VETOED approval + update status + audit log
+  await prisma.$transaction([
+    prisma.approval.create({
+      data: { 
+        proposalId: id, 
+        actor: vetoer, 
+        action: "VETOED" 
+      }
+    }),
+    prisma.proposal.update({
+      where: { id },
+      data: { status: "VETOED" }
+    }),
+    prisma.auditLog.create({
+      data: { 
+        proposalId: id, 
+        event: "VETOED", 
+        actor: vetoer 
+      }
+    })
+  ]);
+  
+  res.json({ success: true, vetoed: true });
+});
+\end{lstlisting}
+
+This mechanism balances velocity (auto-execute) with safety (human oversight).
 
 \subsection{Database Schema}
 
@@ -460,6 +568,7 @@ model AuditLog {
 
 Events tracked: \texttt{PROPOSED}, \texttt{AUTO\_EXECUTED}, \texttt{APPROVAL\_SENT}, \texttt{APPROVED}, \texttt{REJECTED}, \texttt{VETOED}, \texttt{EXECUTED}, \texttt{FAILED}, \texttt{INCIDENT\_DECLARED}, \texttt{HOTFIX\_APPLIED}
 
+\newpage
 \subsection{Atomic Transactions}
 
 All database writes use Prisma transactions to ensure atomicity:
@@ -486,6 +595,7 @@ await prisma.$transaction(async (tx) => {
 
 If any step fails, the entire transaction rolls back.
 
+\newpage
 \subsection{Slack Integration}
 
 \subsubsection{Approval Cards}
@@ -545,6 +655,198 @@ router.post("/events", async (req, res) => {
 });
 \end{lstlisting}
 
+\subsubsection{Browser-Friendly Responses}
+Approval endpoints detect browser requests and render HTML pages:
+
+\begin{lstlisting}[language=JavaScript,caption=HTML Response for Browser Clicks]
+router.get("/approve/:id", async (req, res) => {
+  // ... approval logic ...
+  
+  if (wantsBrowserHtml(req)) {
+    return res.send(renderHtmlPage(
+      "Approved",
+      "(emoji)",
+      `Proposal "${proposal.ticketTitle}" approved!`,
+      "PR creation in progress. Check GitHub."
+    ));
+  }
+  res.json({ success: true, prUrl });
+});
+\end{lstlisting}
+
+This provides a clean user experience when clicking Slack buttons, showing a success page instead of raw JSON.
+
+\subsection{Audit \& Compliance}
+
+\subsubsection{Real-Time Audit Feed}
+The dashboard polls \texttt{GET /audit/feed} for live updates:
+
+\begin{lstlisting}[language=JavaScript,caption=Audit Feed (audit.ts)]
+router.get("/feed", async (req, res) => {
+  const since = req.query.since; // ISO timestamp
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  
+  const feed = await prisma.auditLog.findMany({
+    where: since ? { createdAt: { gt: new Date(since) } } : undefined,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: {
+      proposal: {
+        select: { ticketTitle: true, tier: true, repo: true }
+      }
+    }
+  });
+  
+  res.json({ feed, count: feed.length });
+});
+\end{lstlisting}
+
+\newpage
+\subsubsection{Compliance Report Generation}
+\texttt{GET /audit/report} generates aggregate statistics:
+
+\begin{lstlisting}[language=JavaScript,caption=Compliance Report]
+router.get("/report", async (req, res) => {
+  const hoursBack = parseInt(req.query.hours) || 24;
+  const since = new Date(Date.now() - hoursBack * 3600000);
+  
+  const proposals = await prisma.proposal.findMany({
+    where: { createdAt: { gte: since } }
+  });
+  
+  const report = {
+    period: { hours: hoursBack, since },
+    summary: {
+      total: proposals.length,
+      byTier: {
+        GREEN: proposals.filter(p => p.tier === "GREEN").length,
+        YELLOW: proposals.filter(p => p.tier === "YELLOW").length,
+        RED: proposals.filter(p => p.tier === "RED").length
+      },
+      byStatus: {
+        AUTO_EXECUTED: proposals.filter(p => 
+          p.status === "AUTO_EXECUTED").length,
+        AWAITING_APPROVAL: proposals.filter(p => 
+          p.status === "AWAITING_APPROVAL").length,
+        APPROVED: proposals.filter(p => 
+          p.status === "APPROVED").length,
+        REJECTED: proposals.filter(p => 
+          p.status === "REJECTED").length
+      },
+      failSafeTriggers: proposals.filter(p => 
+        p.failSafeTriggered).length,
+      avgRiskScore: average(proposals.map(p => p.riskScore))
+    }
+  };
+  
+  res.json(report);
+});
+\end{lstlisting}
+
+This provides auditors with quantitative evidence of AI governance effectiveness.
+
+\newpage
+\subsection{Jira Integration}
+
+\subsubsection{Webhook Endpoint}
+NexGuard integrates with Jira Cloud via webhooks. Teams configure Jira Automation rules to POST to \texttt{/intake/jira} when issues are created:
+
+\begin{lstlisting}[language=JavaScript,caption=Jira Webhook Handler (intake.ts)]
+router.post("/jira", async (req: Request, res: Response) => {
+  const payload = req.body;
+  const issue = payload?.issue;
+  
+  // Map Jira fields to NexGuard TicketInput
+  const ticket: TicketInput = {
+    title: fields.summary || "Untitled",
+    description: extractAdfText(fields.description),
+    repo: extractRepo(fields),
+    reporter: fields.reporter?.displayName || "jira-user"
+  };
+  
+  // Process through full ML pipeline
+  const result = await processTicket(ticket);
+  
+  res.status(201).json({
+    ...result,
+    source: "jira",
+    jiraKey: issue.key,
+    jiraUrl: issue.self
+  });
+});
+\end{lstlisting}
+
+\newpage
+\subsubsection{Field Mapping}
+The integration extracts repository information from multiple sources:
+
+\begin{enumerate}
+    \item \textbf{Labels} --- \texttt{repo:org/name} tags on Jira issues
+    \item \textbf{Custom Fields} --- Dedicated ``Repository'' field
+    \item \textbf{Components} --- Component names matching repo patterns
+    \item \textbf{Project Mappings} --- Configured defaults per Jira project key
+\end{enumerate}
+
+\begin{lstlisting}[language=JavaScript,caption=Repo Extraction Logic]
+function extractRepo(fields: any): string {
+  // 1. Label like "repo:org/demo-app"
+  const repoLabel = fields.labels?.find(
+    (l: string) => l.startsWith("repo:")
+  );
+  if (repoLabel) return repoLabel.replace("repo:", "");
+  
+  // 2. Custom field named "Repository"
+  for (const key of Object.keys(fields)) {
+    if (key.startsWith("customfield_") && 
+        fields[key].includes("/")) {
+      return fields[key];
+    }
+  }
+  
+  // 3. Component name with repo pattern
+  const component = fields.components?.[0]?.name;
+  if (component?.includes("/")) return component;
+  
+  // 4. Fallback to project key mapping
+  return projectMappings[fields.project?.key];
+}
+\end{lstlisting}
+
+\subsubsection{ADF Text Extraction}
+Jira Cloud descriptions use Atlassian Document Format (ADF). NexGuard recursively extracts plain text:
+
+\begin{lstlisting}[language=JavaScript,caption=ADF Parser]
+function extractAdfText(adf: any): string {
+  if (!adf || typeof adf !== "object") return "";
+  let text = "";
+  if (adf.text) text += adf.text;
+  if (Array.isArray(adf.content)) {
+    for (const node of adf.content) {
+      text += extractAdfText(node);
+      if (node.type === "paragraph") text += "\\n";
+    }
+  }
+  return text.trim();
+}
+\end{lstlisting}
+
+\subsubsection{Setup Instructions}
+To enable Jira integration:
+
+\begin{enumerate}
+    \item \textbf{Expose webhook URL} --- Use ngrok or deploy to production
+    \item \textbf{Configure Jira Automation}
+    \begin{itemize}
+        \item Trigger: ``When issue created'' (filter by project/issue type)
+        \item Action: ``Send web request''
+        \item URL: \texttt{https://<your-domain>/intake/jira}
+        \item Method: POST
+        \item Body: \texttt{\{\{issue\}\}} (Jira smart value)
+    \end{itemize}
+    \item \textbf{Add repo labels} --- Tag issues with \texttt{repo:org/name}
+    \item \textbf{Test} --- Create a Jira issue and verify NexGuard receives webhook
+\end{enumerate}
+
 \subsection{GitHub Integration}
 
 \subsubsection{PR Creation}
@@ -581,6 +883,132 @@ export async function executeProposal(proposalId: string) {
   });
   
   return { prUrl };
+}
+\end{lstlisting}
+
+\subsection{Policy Configuration}
+
+\subsubsection{policy.yaml}
+NexGuard uses a YAML configuration file (\texttt{config/policy.yaml}) to define risk thresholds and fail-safe patterns:
+
+\begin{lstlisting}[language=yaml,caption=Policy Configuration (policy.yaml)]
+risk:
+  green:
+    max_score: 30
+    auto_execute: true
+  yellow:
+    max_score: 70
+    veto_window_hours: 1
+  red:
+    min_score: 71
+    requires_explicit_approval: true
+
+fail_safe:
+  # Patterns that always trigger RED
+  always_red_patterns:
+    - "drop table"
+    - "drop column"
+    - "rm -rf"
+    - "node_tls_reject_unauthorized"
+
+incident:
+  countdown_seconds: 45
+\end{lstlisting}
+
+\subsubsection{Policy Loading}
+The \texttt{policy.ts} module provides type-safe access:
+
+\begin{lstlisting}[language=JavaScript,caption=Policy Service (config/policy.ts)]
+export interface PolicyConfig {
+  risk: {
+    green: { max_score: number; auto_execute: boolean; };
+    yellow: { max_score: number; veto_window_hours: number; };
+    red: { min_score: number; requires_explicit_approval: boolean; };
+  };
+  fail_safe: { always_red_patterns: string[]; };
+  incident: { countdown_seconds: number; };
+}
+
+export function getPolicy(): PolicyConfig {
+  if (!_policy) {
+    const raw = yaml.load(fs.readFileSync("config/policy.yaml"));
+    _policy = validatePolicy(raw);
+  }
+  return _policy;
+}
+\end{lstlisting}
+
+Risk scores are calculated against these thresholds, ensuring consistent governance across all environments.
+
+\subsection{Incident Management}
+
+\subsubsection{Incident Declaration Flow}
+When production issues occur, engineers POST to \texttt{/incident}:
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Persist Incident} --- Store in DB with status ACTIVE
+    \item \textbf{Generate Hotfixes} --- Incident Agent ranks 3-5 candidates within 45s
+    \item \textbf{Send Slack Card} --- Present hotfixes for human selection
+    \item \textbf{Apply Hotfix} --- POST to \texttt{/incident/:id/apply/:hotfixId} creates emergency PR
+    \item \textbf{Resolve} --- POST to \texttt{/incident/:id/resolve} marks incident complete
+\end{enumerate}
+
+\begin{lstlisting}[language=JavaScript,caption=Incident Hotfix Application (routes/incident.ts)]
+router.post("/:id/apply/:hotfixId", async (req, res) => {
+  const { id, hotfixId } = req.params;
+  const appliedBy = req.query.appliedBy || "dashboard-user";
+  
+  // Verify hotfix belongs to incident
+  const hotfix = await prisma.hotfix.findUnique({
+    where: { id: hotfixId }
+  });
+  if (!hotfix || hotfix.incidentId !== id) {
+    return res.status(404).json({ error: "Hotfix not found" });
+  }
+  
+  // Execute: create branch, apply diff, open PR
+  const { prUrl } = await executeHotfix(hotfixId, appliedBy);
+  
+  res.json({ success: true, prUrl, hotfixId });
+});
+\end{lstlisting}
+
+\subsubsection{Incident Endpoints}
+Full CRUD operations for incident management:
+
+\begin{itemize}
+    \item \textbf{GET /incident} --- List all incidents with hotfixes
+    \item \textbf{GET /incident/:id} --- Fetch single incident + hotfixes + audit trail
+    \item \textbf{POST /incident/:id/apply/:hotfixId} --- Apply selected hotfix (creates PR)
+    \item \textbf{POST /incident/:id/resolve} --- Manually mark incident resolved
+\end{itemize}
+
+\newpage
+\subsubsection{Postmortem Generation}
+After resolution, teams call \texttt{generatePostmortem(incidentId)}:
+
+\begin{lstlisting}[language=JavaScript,caption=Postmortem from Audit Trail]
+export async function generatePostmortem(incidentId: string) {
+  const incident = await prisma.incident.findUnique({
+    where: { id: incidentId },
+    include: { hotfixes: true }
+  });
+  
+  const auditLogs = await prisma.auditLog.findMany({
+    where: {
+      event: { in: ["INCIDENT_DECLARED", "HOTFIX_APPLIED"] },
+      createdAt: { gte: incident.createdAt }
+    }
+  });
+  
+  // GPT-4o generates structured postmortem:
+  // 1. Incident Summary
+  // 2. Root Cause
+  // 3. Timeline
+  // 4. Resolution
+  // 5. Action Items
+  // 6. Lessons Learned
+  return gpt4oResponse;
 }
 \end{lstlisting}
 
@@ -629,8 +1057,7 @@ We chose \texttt{microsoft/codebert-base} for its:
     \item Lightweight inference ($<$ 100ms per prediction)
 \end{itemize}
 
-\textbf{Recommended upgrade:} \texttt{microsoft/graphcodebert-base} (data-flow aware) or \texttt{microsoft/codereviewer} (trained on diffs natively)
-
+\newpage
 \subsubsection{Fine-Tuning}
 \begin{lstlisting}[language=Python,caption=Classifier Training (train\_classifier.py)]
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -715,6 +1142,7 @@ class DiffAutoencoder(nn.Module):
         return reconstruction
 \end{lstlisting}
 
+\newpage
 \subsubsection{Training}
 Trained \textbf{only on GREEN proposals} (200 samples):
 
@@ -766,6 +1194,7 @@ def detect_anomaly(model, body: AnomalyInput):
     )
 \end{lstlisting}
 
+\newpage
 \subsection{Feature 3: Similarity Check}
 
 \subsubsection{Implementation}
@@ -798,6 +1227,7 @@ def check_similarity(body: SimilarityInput):
     return SimilarityOutput(is_duplicate=False)
 \end{lstlisting}
 
+\newpage
 \subsection{Fail-Safe Mechanisms}
 
 \subsubsection{Rules-Based Fallback}
@@ -886,6 +1316,7 @@ def test_anomaly_detection():
     assert response.json()["is_anomaly"] == True
 \end{lstlisting}
 
+\newpage
 \subsubsection{Backend API Tests}
 \begin{lstlisting}[language=JavaScript,caption=Approval Endpoint Test]
 describe("Approval Routes", () => {
@@ -937,6 +1368,7 @@ curl -X POST http://localhost:3000/intake \
 # }
 \end{lstlisting}
 
+\newpage
 \subsubsection{End-to-End Scenario: RED Tier}
 \begin{lstlisting}[language=bash,caption=RED Tier Test]
 # Submit high-risk ticket
@@ -1001,6 +1433,7 @@ F1 Score & 0.93 & 0.75 & 0.90 \\
 \caption{CodeBERT Classifier Performance}
 \end{table}
 
+\newpage
 \textbf{Observations:}
 \begin{itemize}
     \item GREEN detection very reliable (F1: 0.93)
@@ -1118,6 +1551,20 @@ Tested on 30 duplicate ticket pairs:
 
 \textit{This scenario demonstrates the value of anomaly detection catching patterns unseen during training.}
 
+\subsubsection{Scenario D: Jira Webhook Integration}
+\begin{tcolorbox}[colback=blue!5,colframe=blue!60!black]
+\textbf{Trigger:} Issue DEV-123 created in Jira: "Fix order subtotal calculation bug" \\
+\textbf{Webhook:} Jira Automation \u2192 POST /intake/jira \\
+\textbf{Field Mapping:} Summary \u2192 title, Description (ADF) \u2192 text, Label "repo:org/demo-app" \u2192 repo \\
+\textbf{ML Result:} YELLOW (confidence: 0.85) \\
+\textbf{Action:} Auto-executed + Slack notification with 1-hour veto window \\
+\textbf{Response:} Jira webhook receives \{"proposalId": "uuid-789", "jiraKey": "DEV-123", "jiraUrl": "...", "tier": "YELLOW"\} \\
+\textbf{Final:} PR \#44 created, linked back to Jira issue
+\end{tcolorbox}
+
+\textit{Jira integration enables seamless workflow --- developers continue using their existing issue tracker while NexGuard provides AI-assisted risk governance behind the scenes.}
+
+\newpage
 \subsection{Observed Patterns}
 
 \subsubsection{Classifier Behavior}
@@ -1149,7 +1596,7 @@ Tested on 30 duplicate ticket pairs:
 
 \subsection{Near-Term Enhancements (1-3 months)}
 
-\subsubsection{1. Approval Pattern Learning}
+\subsubsection{Approval Pattern Learning}
 Track human approval decisions to:
 \begin{itemize}
     \item Identify consistently approved patterns $\rightarrow$ auto-approve
@@ -1157,7 +1604,7 @@ Track human approval decisions to:
     \item Personalize thresholds per user
 \end{itemize}
 
-\subsubsection{2. Multi-Stakeholder Approval}
+\subsubsection{Multi-Stakeholder Approval}
 For RED tier proposals:
 \begin{itemize}
     \item Require 2-of-3 approvers (security, ops, dev lead)
@@ -1165,7 +1612,7 @@ For RED tier proposals:
     \item Escalation for high-risk (e.g., \texttt{riskScore > 90})
 \end{itemize}
 
-\subsubsection{3. Test Coverage Integration}
+\subsubsection{Test Coverage Integration}
 Before auto-executing GREEN:
 \begin{itemize}
     \item Run tests in CI (GitHub Actions)
@@ -1173,7 +1620,7 @@ Before auto-executing GREEN:
     \item Report test results in approval card
 \end{itemize}
 
-\subsubsection{4. Fine-Grained File Permissions}
+\subsubsection{Fine-Grained File Permissions}
 Policy rules based on:
 \begin{itemize}
     \item File paths (e.g., \texttt{src/auth/**} always RED)
@@ -1183,7 +1630,7 @@ Policy rules based on:
 
 \subsection{Medium-Term Features (3-6 months)}
 
-\subsubsection{1. Active Learning Pipeline}
+\subsubsection{Active Learning Pipeline}
 \begin{itemize}
     \item Collect human approvals as new training data
     \item Retrain classifier weekly
@@ -1191,7 +1638,7 @@ Policy rules based on:
     \item Gradual rollout based on confidence
 \end{itemize}
 
-\subsubsection{2. Explainability Layer}
+\subsubsection{Explainability Layer}
 Add LIME or SHAP to explain:
 \begin{itemize}
     \item Which diff lines triggered RED
@@ -1199,7 +1646,7 @@ Add LIME or SHAP to explain:
     \item Show explanations in Slack approval card
 \end{itemize}
 
-\subsubsection{3. Incident Correlation}
+\subsubsection{Incident Correlation}
 Link proposals to production incidents:
 \begin{itemize}
     \item "Proposal \#123 caused incident \#45"
@@ -1207,7 +1654,7 @@ Link proposals to production incidents:
     \item Update training data with incident outcomes
 \end{itemize}
 
-\subsubsection{4. Cross-Repo Analysis}
+\subsubsection{Cross-Repo Analysis}
 For orgs with multiple repos:
 \begin{itemize}
     \item Detect breaking changes across microservices
@@ -1217,21 +1664,21 @@ For orgs with multiple repos:
 
 \subsection{Long-Term Vision (6-12 months)}
 
-\subsubsection{1. Self-Improving System}
+\subsubsection{Self-Improving System}
 \begin{itemize}
     \item Automatically retrain on human feedback
     \item Learn optimal thresholds per org
     \item Predict approval time (alert if likely to reject)
 \end{itemize}
 
-\subsubsection{2. Proactive Risk Alerts}
+\subsubsection{Proactive Risk Alerts}
 \begin{itemize}
     \item "This ticket is similar to one that caused incident \#67"
     \item "87\% of changes to \texttt{payments.py} require rollback"
     \item Suggest safer alternatives
 \end{itemize}
 
-\subsubsection{3. Federated Learning}
+\subsubsection{Federated Learning}
 For SaaS deployment:
 \begin{itemize}
     \item Train on anonymized data from all customers
@@ -1239,7 +1686,7 @@ For SaaS deployment:
     \item Org-specific fine-tuning
 \end{itemize}
 
-\subsubsection{4. Code Generation Quality Metrics}
+\subsubsection{Code Generation Quality Metrics}
 Measure AI agent performance:
 \begin{itemize}
     \item How often do generated diffs need manual fixes?
@@ -1392,33 +1839,11 @@ We envision NexGuard as the \textbf{first step toward safe AI-assisted developme
 
 The code is GPT-4o. The risk scorer is CodeBERT. The final decision is human. \textbf{That's NexGuard.}
 
-%============================================================================
-\newpage
-\section*{References}
-% ============================================================================
-
-\begin{enumerate}[leftmargin=*]
-    \item Feng et al. (2020). \textit{CodeBERT: A Pre-Trained Model for Programming and Natural Languages}. EMNLP 2020.
-    
-    \item Guo et al. (2021). \textit{GraphCodeBERT: Pre-training Code Representations with Data Flow}. ICLR 2021.
-    
-    \item Li et al. (2022). \textit{CodeReviewer: Pre-Training for Automating Code Review Activities}. ArXiv 2022.
-    
-    \item Brown et al. (2020). \textit{Language Models are Few-Shot Learners} (GPT-3). NeurIPS 2020.
-    
-    \item Vaswani et al. (2017). \textit{Attention is All You Need}. NeurIPS 2017.
-    
-    \item GitGuardian. (2023). \textit{State of Secrets Sprawl Report}. \url{https://gitguardian.com}
-    
-    \item GitHub. (2023). \textit{State of the Octoverse}. \url{https://github.com/octoverse}
-    
-    \item OpenAI. (2024). \textit{GPT-4o System Card}. \url{https://openai.com/research/gpt-4o}
-\end{enumerate}
 
 % ============================================================================
 \newpage
 \appendix
-\section{Appendix A: File Structure}
+\section{File Structure}
 % ============================================================================
 
 \begin{lstlisting}[language=bash,caption=Project Directory Tree]
@@ -1467,7 +1892,7 @@ nexguard/
 
 % ============================================================================
 \newpage
-\section{Appendix B: Environment Setup}
+\section{Environment Setup}
 % ============================================================================
 
 \begin{lstlisting}[language=bash,caption=Setup Instructions]
@@ -1515,7 +1940,7 @@ cd dashboard && pnpm dev
 
 % ============================================================================
 \newpage
-\section{Appendix C: API Documentation}
+\section{API Documentation}
 % ============================================================================
 
 \subsection{POST /intake}
@@ -1578,7 +2003,7 @@ Approve a proposal (Slack button callback).
 
 % ============================================================================
 \newpage
-\section{Appendix D: Configuration}
+\section{Configuration}
 % ============================================================================
 
 \subsection{Risk Policy (config/policy.yaml)}
