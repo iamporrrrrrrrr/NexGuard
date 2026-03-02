@@ -1,6 +1,6 @@
 import { Octokit } from "@octokit/rest";
 
-const IS_MOCK = !process.env.GITHUB_TOKEN;
+const IS_MOCK = process.env.GITHUB_MOCK === "true" || !process.env.GITHUB_TOKEN;
 
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 

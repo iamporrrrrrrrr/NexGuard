@@ -295,11 +295,11 @@ function extractRepo(fields: any): string {
 
   // 4. Project key mapping (configure per team)
   const projectMappings: Record<string, string> = {
-    DEV: "devguard-org/demo-app",
-    INFRA: "devguard-org/infra",
-    PLATFORM: "devguard-org/platform",
+    DEV: "iamporrrrrrrrr/demo-app",
+    INFRA: "iamporrrrrrrrr/demo-app",
+    PLATFORM: "iamporrrrrrrrr/demo-app",
   };
-  return projectMappings[fields.project?.key] || "devguard-org/demo-app";
+  return projectMappings[fields.project?.key] || "iamporrrrrrrrr/demo-app";
 }
 
 // Extract plain text from Jira ADF (Atlassian Document Format)
