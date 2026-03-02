@@ -10,6 +10,8 @@ import ProposalsView from "./components/views/ProposalsView";
 import IncidentsView from "./components/views/IncidentsView";
 import AuditLogView from "./components/views/AuditLogView";
 import SettingsView from "./components/views/SettingsView";
+import IncidentModal from "./components/IncidentModal";
+import ReportPanel from "./components/ReportPanel";
 // TODO: Remove dummy data imports when connecting to real backend
 import {
   dummyReport, dummyFeed, dummyProposals,
@@ -40,6 +42,7 @@ export default function Home() {
   const [notifications, setNotifications] = useState(dummyNotifications);
   // All proposals list — used by ProposalsView (local state for approve/reject mutations)
   const [allProposals, setAllProposals] = useState([]);
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
 
   const pendingCount = allProposals.filter((p) => p.status === "AWAITING_APPROVAL").length;
 
@@ -177,7 +180,7 @@ export default function Home() {
             />
           )}
           {activePage === "Incidents" && (
-            <IncidentsView incidents={dummyIncidents} />
+            <IncidentsView onDeclareIncident={() => setShowIncidentModal(true)} />
           )}
           {activePage === "Audit Log" && (
             <AuditLogView feed={feed} />
@@ -200,6 +203,17 @@ export default function Home() {
                       DEMO DATA
                     </span>
                   )}
+                  <button
+                    onClick={() => setShowIncidentModal(true)}
+                    style={{
+                      marginLeft: "auto", background: "#ef4444", color: "#fff",
+                      border: "none", borderRadius: 7, padding: "7px 16px",
+                      fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: 5,
+                    }}
+                  >
+                    <AlertTriangle size={14} /> Declare Incident
+                  </button>
                 </div>
                 <p style={{ color: "#6b7280", fontSize: 14, marginTop: 4 }}>
                   Human-governed AI coding agent orchestration platform
@@ -259,6 +273,9 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Compliance Report Panel */}
+              <ReportPanel />
+
               {/* Proposals awaiting approval — quick-action cards */}
               {pendingCount > 0 && (
                 <div style={{ marginBottom: 24 }}>
@@ -309,6 +326,12 @@ export default function Home() {
           )}
         </main>
       </div>
+
+      {/* Incident Declaration Modal */}
+      <IncidentModal
+        isOpen={showIncidentModal}
+        onClose={() => setShowIncidentModal(false)}
+      />
     </div>
   );
 }

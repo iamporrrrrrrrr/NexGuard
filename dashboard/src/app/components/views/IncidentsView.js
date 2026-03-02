@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
-import { Zap, CheckCircle2, Clock, ChevronDown, ChevronUp, Terminal, Check, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Zap, CheckCircle2, Clock, ChevronDown, ChevronUp, Terminal, Check, AlertTriangle, Plus, ExternalLink } from "lucide-react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 const blastColors = {
   LOW:    { bg: "#f0fdf4", color: "#166534", border: "#bbf7d0" },
@@ -20,15 +22,31 @@ function HotfixCard({ hotfix, incidentId, onApply }) {
   const [showDiff, setShowDiff] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(hotfix.status === "APPLIED");
+  const [prUrl, setPrUrl] = useState(null);
+  const [applyError, setApplyError] = useState(null);
   const blast = blastColors[hotfix.blastRadius] || blastColors.LOW;
 
-  const handleApply = () => {
+  const handleApply = async () => {
     setApplying(true);
-    setTimeout(() => {
-      setApplied(true);
+    setApplyError(null);
+    try {
+      const res = await fetch(
+        `${API_BASE}/incident/${incidentId}/apply/${hotfix.id}?appliedBy=dashboard-user`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setApplied(true);
+        setPrUrl(data.prUrl);
+        if (onApply) onApply(hotfix.id);
+      } else {
+        setApplyError(data.error || "Failed to apply");
+      }
+    } catch (err) {
+      setApplyError("Network error");
+    } finally {
       setApplying(false);
-      if (onApply) onApply(hotfix.id);
-    }, 500);
+    }
   };
 
   return (
@@ -56,6 +74,21 @@ function HotfixCard({ hotfix, incidentId, onApply }) {
             {applied && (
               <span style={{ fontSize: 12, color: "#166534", fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
                 <CheckCircle2 size={12} /> Applied{hotfix.appliedBy ? ` by ${hotfix.appliedBy}` : ""}
+              </span>
+            )}
+            {prUrl && (
+              <a
+                href={prUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 12, color: "#5865f2", fontWeight: 500, display: "flex", alignItems: "center", gap: 3, textDecoration: "none" }}
+              >
+                <ExternalLink size={11} /> View PR
+              </a>
+            )}
+            {applyError && (
+              <span style={{ fontSize: 12, color: "#991b1b", fontWeight: 500, display: "flex", alignItems: "center", gap: 3 }}>
+                <AlertTriangle size={11} /> {applyError}
               </span>
             )}
           </div>
@@ -111,15 +144,31 @@ function HotfixCard({ hotfix, incidentId, onApply }) {
   );
 }
 
-function IncidentCard({ incident }) {
+function IncidentCard({ incident, onRefresh }) {
   const [showLogs, setShowLogs] = useState(false);
   const [hotfixes, setHotfixes] = useState(incident.hotfixes || []);
-  const isActive = incident.status === "ACTIVE";
+  const [isActive, setIsActive] = useState(incident.status === "ACTIVE");
+  const [resolving, setResolving] = useState(false);
 
   const handleApply = (hotfixId) => {
     setHotfixes((prev) =>
       prev.map((h) => h.id === hotfixId ? { ...h, status: "APPLIED", appliedBy: "dashboard-user", appliedAt: new Date().toISOString() } : h)
     );
+  };
+
+  const handleResolve = async () => {
+    setResolving(true);
+    try {
+      const res = await fetch(`${API_BASE}/incident/${incident.id}/resolve?actor=dashboard-user`, { method: "POST" });
+      if (res.ok) {
+        setIsActive(false);
+        if (onRefresh) onRefresh();
+      }
+    } catch (err) {
+      console.error("Resolve error:", err);
+    } finally {
+      setResolving(false);
+    }
   };
 
   return (
@@ -160,16 +209,34 @@ function IncidentCard({ incident }) {
             )}
           </p>
         </div>
-        <div
-          style={{
-            background: isActive ? "#fef2f2" : "#f0fdf4", border: `1px solid ${isActive ? "#fecaca" : "#bbf7d0"}`,
-            borderRadius: 8, padding: "8px 14px", textAlign: "center", flexShrink: 0,
-          }}
-        >
-          <div style={{ fontSize: 22, fontWeight: 800, color: isActive ? "#ef4444" : "#22c55e", lineHeight: 1 }}>
-            {hotfixes.length}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
+          <div
+            style={{
+              background: isActive ? "#fef2f2" : "#f0fdf4", border: `1px solid ${isActive ? "#fecaca" : "#bbf7d0"}`,
+              borderRadius: 8, padding: "8px 14px", textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 22, fontWeight: 800, color: isActive ? "#ef4444" : "#22c55e", lineHeight: 1 }}>
+              {hotfixes.length}
+            </div>
+            <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginTop: 2 }}>HOTFIXES</div>
           </div>
-          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginTop: 2 }}>HOTFIXES</div>
+          {isActive && (
+            <button
+              onClick={handleResolve}
+              disabled={resolving}
+              style={{
+                background: resolving ? "#e5e7eb" : "#22c55e",
+                color: resolving ? "#9ca3af" : "#fff",
+                border: "none", borderRadius: 6, padding: "5px 14px",
+                fontSize: 12, fontWeight: 600, cursor: resolving ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", gap: 4,
+              }}
+            >
+              <CheckCircle2 size={12} />
+              {resolving ? "Resolving…" : "Resolve"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -216,7 +283,30 @@ function IncidentCard({ incident }) {
   );
 }
 
-export default function IncidentsView({ incidents = [] }) {
+export default function IncidentsView({ onDeclareIncident }) {
+  const [incidents, setIncidents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchIncidents = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/incident`);
+      if (res.ok) {
+        const data = await res.json();
+        setIncidents(data.incidents || []);
+      }
+    } catch (err) {
+      console.error("Fetch incidents error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchIncidents();
+    const interval = setInterval(fetchIncidents, 5000);
+    return () => clearInterval(interval);
+  }, [fetchIncidents]);
+
   const active = incidents.filter((i) => i.status === "ACTIVE");
   const resolved = incidents.filter((i) => i.status === "RESOLVED");
 
@@ -238,13 +328,28 @@ export default function IncidentsView({ incidents = [] }) {
               <Zap size={11} /> {active.length} active
             </span>
           )}
+          <button
+            onClick={onDeclareIncident}
+            style={{
+              marginLeft: "auto", background: "#ef4444", color: "#fff",
+              border: "none", borderRadius: 7, padding: "7px 16px",
+              fontSize: 13, fontWeight: 600, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 5,
+            }}
+          >
+            <Plus size={14} /> Declare Incident
+          </button>
         </div>
         <p style={{ color: "#6b7280", fontSize: 14 }}>
           Production incidents and AI-ranked hotfix proposals with 45s countdown
         </p>
       </div>
 
-      {incidents.length === 0 ? (
+      {loading ? (
+        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "50px 20px", textAlign: "center" }}>
+          <div style={{ fontSize: 15, color: "#9ca3af" }}>Loading incidents...</div>
+        </div>
+      ) : incidents.length === 0 ? (
         <div
           style={{
             background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10,
@@ -262,7 +367,7 @@ export default function IncidentsView({ incidents = [] }) {
               <div style={{ fontSize: 12, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10, display: "flex", alignItems: "center", gap: 5 }}>
                 <Zap size={12} /> Active ({active.length})
               </div>
-              {active.map((i) => <IncidentCard key={i.id} incident={i} />)}
+              {active.map((i) => <IncidentCard key={i.id} incident={i} onRefresh={fetchIncidents} />)}
             </div>
           )}
           {resolved.length > 0 && (
@@ -270,7 +375,7 @@ export default function IncidentsView({ incidents = [] }) {
               <div style={{ fontSize: 12, fontWeight: 700, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10, display: "flex", alignItems: "center", gap: 5 }}>
                 <CheckCircle2 size={12} /> Resolved ({resolved.length})
               </div>
-              {resolved.map((i) => <IncidentCard key={i.id} incident={i} />)}
+              {resolved.map((i) => <IncidentCard key={i.id} incident={i} onRefresh={fetchIncidents} />)}
             </div>
           )}
         </>
