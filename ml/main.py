@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     models.clear()
 
 
-app = FastAPI(title="DevGuard ML Sidecar", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="NexGuard ML Sidecar", version="1.0.0", lifespan=lifespan)
 
 
 # ---------------------------------------------------------------------------

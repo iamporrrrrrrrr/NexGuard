@@ -9,7 +9,7 @@ async function createTestProposal() {
         id: "test-123",
         ticketTitle: "Add logging to authentication module",
         ticketDescription: "Add debug logging to track authentication flow",
-        repo: "devguard-org/demo-app",
+        repo: "nexguard-org/demo-app",
         reporter: "alice",
         summary: "Added console.log statements to track user login flow",
         diff: `diff --git a/src/auth.ts b/src/auth.ts

@@ -43,7 +43,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`DevGuard listening on port ${PORT}`);
+  console.log(`NexGuard listening on port ${PORT}`);
 });
 
 export default app;

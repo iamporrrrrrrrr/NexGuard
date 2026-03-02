@@ -20,7 +20,7 @@ function renderHtmlPage(
   message: string,
   detail: string = "",
 ): string {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title} — DevGuard</title>
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title} — NexGuard</title>
 <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}
 .card{background:#1e293b;border-radius:16px;padding:48px;text-align:center;max-width:480px;box-shadow:0 25px 50px rgba(0,0,0,.5)}
 .emoji{font-size:64px;margin-bottom:16px}.title{font-size:24px;font-weight:700;margin-bottom:8px}.detail{color:#94a3b8;font-size:14px;margin-top:12px}

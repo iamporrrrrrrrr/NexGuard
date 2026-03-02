@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma";
 // Send an approval card to Slack for a RED/YELLOW proposal
 export async function sendApprovalCard(proposalId: string): Promise<void> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-  const appUrl = process.env.DEVGUARD_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXGUARD_APP_URL || "http://localhost:3000";
 
   if (!webhookUrl) {
     console.warn(
@@ -194,7 +194,7 @@ export async function sendApprovalCard(proposalId: string): Promise<void> {
 // Send a hotfix selection card to Slack (incident mode)
 export async function sendHotfixCard(incidentId: string): Promise<void> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-  const appUrl = process.env.DEVGUARD_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXGUARD_APP_URL || "http://localhost:3000";
 
   if (!webhookUrl) {
     console.warn("SLACK_WEBHOOK_URL not configured. Skipping hotfix card for incident:", incidentId);

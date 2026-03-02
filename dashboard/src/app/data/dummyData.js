@@ -50,7 +50,7 @@ export const dummyProposals = [
       "Webhook signature validation changes",
       "No rollback path within 24h window",
     ],
-    repo: "devguard-org/demo-app",
+    repo: "nexguard-org/demo-app",
     reporter: "bob",
     status: "AWAITING_APPROVAL",
     filesToModify: [
@@ -74,7 +74,7 @@ export const dummyProposals = [
       "Session invalidation side-effects",
       "Affects 5 middleware files",
     ],
-    repo: "devguard-org/demo-app",
+    repo: "nexguard-org/demo-app",
     reporter: "alice",
     status: "AWAITING_APPROVAL",
     filesToModify: ["src/middleware/auth.ts", "src/routes/user.ts", "src/lib/jwt.ts"],
@@ -93,7 +93,7 @@ export const dummyFeed = [
     proposal: {
       ticketTitle: "Add docstrings to orders module",
       tier: "GREEN",
-      repo: "devguard-org/demo-app",
+      repo: "nexguard-org/demo-app",
     },
   },
   {
@@ -105,7 +105,7 @@ export const dummyFeed = [
     proposal: {
       ticketTitle: "Migrate payments from Stripe v2 to v3 SDK",
       tier: "RED",
-      repo: "devguard-org/demo-app",
+      repo: "nexguard-org/demo-app",
     },
   },
   {
@@ -117,7 +117,7 @@ export const dummyFeed = [
     proposal: {
       ticketTitle: "Refactor user authentication middleware",
       tier: "YELLOW",
-      repo: "devguard-org/demo-app",
+      repo: "nexguard-org/demo-app",
     },
   },
   {
@@ -129,7 +129,7 @@ export const dummyFeed = [
     proposal: {
       ticketTitle: "Update rate limiting config for API gateway",
       tier: "YELLOW",
-      repo: "devguard-org/demo-app",
+      repo: "nexguard-org/demo-app",
     },
   },
   {
@@ -141,7 +141,7 @@ export const dummyFeed = [
     proposal: {
       ticketTitle: "Update rate limiting config for API gateway",
       tier: "YELLOW",
-      repo: "devguard-org/demo-app",
+      repo: "nexguard-org/demo-app",
     },
   },
   {
@@ -153,7 +153,7 @@ export const dummyFeed = [
     proposal: {
       ticketTitle: "Fix typo in README and update changelog",
       tier: "GREEN",
-      repo: "devguard-org/demo-app",
+      repo: "nexguard-org/demo-app",
     },
   },
   {
@@ -173,7 +173,7 @@ export const dummyFeed = [
     proposal: {
       ticketTitle: "orders-api 500 error: missing column orders.user_id_new",
       tier: "RED",
-      repo: "devguard-org/demo-app",
+      repo: "nexguard-org/demo-app",
     },
   },
   {
@@ -185,7 +185,7 @@ export const dummyFeed = [
     proposal: {
       ticketTitle: "Drop legacy support for Node.js 14 in CI pipeline",
       tier: "RED",
-      repo: "devguard-org/infra",
+      repo: "nexguard-org/infra",
     },
   },
   {
@@ -197,7 +197,7 @@ export const dummyFeed = [
     proposal: {
       ticketTitle: "Add ESLint rule for no-console in production builds",
       tier: "GREEN",
-      repo: "devguard-org/demo-app",
+      repo: "nexguard-org/demo-app",
     },
   },
 ];
@@ -209,7 +209,7 @@ export const dummyAllProposals = [
     summary: "Update all Stripe API calls to use the new v3 SDK including webhook handling, subscription management, and customer portal endpoints.",
     tier: "RED", riskScore: 87,
     riskReasons: ["Modifies payment processing logic", "Affects 12 files across 3 services", "Webhook signature validation changes", "No rollback path within 24h window"],
-    repo: "devguard-org/demo-app", reporter: "bob",
+    repo: "nexguard-org/demo-app", reporter: "bob",
     status: "AWAITING_APPROVAL",
     filesToModify: ["src/payments/stripe.ts", "src/webhooks/handler.ts", "src/subscriptions/billing.ts", "src/api/checkout.ts"],
     failSafeTriggered: false, createdAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
@@ -220,7 +220,7 @@ export const dummyAllProposals = [
     summary: "Replace legacy session-based auth with JWT tokens across all protected API routes. Includes token refresh logic and logout invalidation.",
     tier: "YELLOW", riskScore: 55,
     riskReasons: ["Modifies authentication flow", "Session invalidation side-effects", "Affects 5 middleware files"],
-    repo: "devguard-org/demo-app", reporter: "alice",
+    repo: "nexguard-org/demo-app", reporter: "alice",
     status: "AWAITING_APPROVAL",
     filesToModify: ["src/middleware/auth.ts", "src/routes/user.ts", "src/lib/jwt.ts"],
     failSafeTriggered: false, createdAt: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
@@ -231,7 +231,7 @@ export const dummyAllProposals = [
     summary: "Increase default rate limit from 100 req/min to 500 req/min for authenticated users. Add per-endpoint overrides for the payments and auth routes.",
     tier: "YELLOW", riskScore: 42,
     riskReasons: ["May expose API to higher load", "Config change affects all routes"],
-    repo: "devguard-org/demo-app", reporter: "carol",
+    repo: "nexguard-org/demo-app", reporter: "carol",
     status: "APPROVED",
     filesToModify: ["config/rate-limits.yaml", "src/middleware/rateLimit.ts"],
     failSafeTriggered: false, createdAt: new Date(Date.now() - 50 * 60 * 1000).toISOString(),
@@ -242,7 +242,7 @@ export const dummyAllProposals = [
     summary: "Document all public functions in orders.py with Google-style docstrings. No logic changes.",
     tier: "GREEN", riskScore: 5,
     riskReasons: [],
-    repo: "devguard-org/demo-app", reporter: "alice",
+    repo: "nexguard-org/demo-app", reporter: "alice",
     status: "AUTO_EXECUTED",
     filesToModify: ["src/orders/orders.py", "src/orders/utils.py"],
     failSafeTriggered: false, createdAt: new Date(Date.now() - 65 * 60 * 1000).toISOString(),
@@ -253,7 +253,7 @@ export const dummyAllProposals = [
     summary: "Corrects spelling errors in README.md and adds v1.4.2 entry to CHANGELOG.md.",
     tier: "GREEN", riskScore: 2,
     riskReasons: [],
-    repo: "devguard-org/demo-app", reporter: "codex",
+    repo: "nexguard-org/demo-app", reporter: "codex",
     status: "AUTO_EXECUTED",
     filesToModify: ["README.md", "CHANGELOG.md"],
     failSafeTriggered: false, createdAt: new Date(Date.now() - 95 * 60 * 1000).toISOString(),
@@ -264,7 +264,7 @@ export const dummyAllProposals = [
     summary: "Remove Node.js 14 matrix from GitHub Actions workflow. Update minimum required version to Node.js 18 LTS.",
     tier: "RED", riskScore: 72,
     riskReasons: ["Breaks CI for developers on Node 14", "Affects all PRs", "No migration guide provided"],
-    repo: "devguard-org/infra", reporter: "dave",
+    repo: "nexguard-org/infra", reporter: "dave",
     status: "REJECTED",
     filesToModify: [".github/workflows/ci.yml", "package.json"],
     failSafeTriggered: false, createdAt: new Date(Date.now() - 185 * 60 * 1000).toISOString(),
@@ -275,7 +275,7 @@ export const dummyAllProposals = [
     summary: "Adds eslint-plugin-no-console with error severity for production, warning for development. Updates existing violations.",
     tier: "GREEN", riskScore: 8,
     riskReasons: [],
-    repo: "devguard-org/demo-app", reporter: "codex",
+    repo: "nexguard-org/demo-app", reporter: "codex",
     status: "EXECUTED",
     filesToModify: [".eslintrc.js", "src/lib/logger.ts"],
     failSafeTriggered: false, createdAt: new Date(Date.now() - 205 * 60 * 1000).toISOString(),
@@ -287,7 +287,7 @@ export const dummyIncidents = [
     id: "inc-001-dummy",
     description: "orders-api returning 500 errors spiking since last deployment",
     logs: "sqlalchemy.exc.OperationalError: no such column: orders.user_id_new\n    at /app/orders/repository.py:134\nTraceback: SELECT orders.id, orders.user_id_new FROM orders WHERE ...",
-    repo: "devguard-org/demo-app",
+    repo: "nexguard-org/demo-app",
     reporter: "charlie",
     status: "RESOLVED",
     createdAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
@@ -306,7 +306,7 @@ export const dummyIncidents = [
     id: "inc-002-dummy",
     description: "High latency on checkout endpoint — p95 response time exceeding 3s",
     logs: "TimeoutError: Redis connection pool exhausted after 2000ms\n    at RedisClient.execute (/app/lib/cache.ts:45:12)\n    at CheckoutService.getCart (/app/services/checkout.ts:89:5)",
-    repo: "devguard-org/demo-app",
+    repo: "nexguard-org/demo-app",
     reporter: "eve",
     status: "ACTIVE",
     createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),

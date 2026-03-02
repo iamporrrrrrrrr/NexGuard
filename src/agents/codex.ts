@@ -5,7 +5,7 @@ import { retrieve } from "./rag";
 
 const openai = new OpenAI();
 
-const SYSTEM_PROMPT = `You are DevGuard Codex, an AI code change agent. Given a development ticket and repo context, produce a precise code change proposal.
+const SYSTEM_PROMPT = `You are NexGuard Codex, an AI code change agent. Given a development ticket and repo context, produce a precise code change proposal.
 
 Respond with valid JSON matching this exact schema:
 {

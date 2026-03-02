@@ -1,4 +1,4 @@
-### DevGuard — HTTP Test Requests
+### NexGuard — HTTP Test Requests
 ### Requires VS Code REST Client extension
 ### ML sidecar must be running on :8001, Node backend on :3000
 
@@ -21,7 +21,7 @@ Content-Type: application/json
 {
   "title": "Add docstrings to utils",
   "description": "Document all public functions",
-  "repo": "devguard-org/demo-app",
+  "repo": "nexguard-org/demo-app",
   "reporter": "alice"
 }
 
@@ -34,7 +34,7 @@ Content-Type: application/json
 {
   "title": "Migrate payments to Stripe v3",
   "description": "Update all Stripe API calls including webhook handling",
-  "repo": "devguard-org/demo-app",
+  "repo": "nexguard-org/demo-app",
   "reporter": "bob"
 }
 

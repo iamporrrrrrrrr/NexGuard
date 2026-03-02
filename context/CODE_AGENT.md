@@ -1,8 +1,8 @@
-# DevGuard — AI/ML Pipeline Context for Claude Code
+# NexGuard — AI/ML Pipeline Context for Claude Code
 
 ## Overall AI Architecture
 
-DevGuard has two separate AI layers that serve different roles:
+NexGuard has two separate AI layers that serve different roles:
 
 ### Layer 1 — OpenAI (cloud, generative)
 
@@ -223,7 +223,7 @@ You'll know it's active when your prompt shows `(venv)`.
 To deactivate: `deactivate`
 
 **Note:** Port conflict — if another Postgres is running on 5432 locally, Docker maps to 5433.
-DATABASE_URL should be `postgresql://user:pass@localhost:5433/devguard`
+DATABASE_URL should be `postgresql://user:pass@localhost:5433/nexguard`
 
 ---
 
@@ -271,7 +271,7 @@ npx ts-node demo/seedTickets.ts
 # Or submit manually:
 curl -X POST http://localhost:3000/intake \
   -H "Content-Type: application/json" \
-  -d '{"title":"Add docstrings to utils","description":"Document all public functions","repo":"devguard-org/demo-app","reporter":"alice"}'
+  -d '{"title":"Add docstrings to utils","description":"Document all public functions","repo":"nexguard-org/demo-app","reporter":"alice"}'
 ```
 
 Submit enough GREEN tickets (docstrings, comments, tests, minor renames) until you have 10+.
@@ -310,12 +310,12 @@ curl http://localhost:8001/health
 # GREEN — should auto-execute, riskReasons shows "GraphCodeBERT: GREEN"
 curl -X POST http://localhost:3000/intake \
   -H "Content-Type: application/json" \
-  -d '{"title":"Add docstrings to utils","description":"Document all public functions","repo":"devguard-org/demo-app","reporter":"alice"}'
+  -d '{"title":"Add docstrings to utils","description":"Document all public functions","repo":"nexguard-org/demo-app","reporter":"alice"}'
 
 # RED — should block and send Slack card
 curl -X POST http://localhost:3000/intake \
   -H "Content-Type: application/json" \
-  -d '{"title":"Migrate payments to Stripe v3","description":"Update all Stripe API calls including webhook handling","repo":"devguard-org/demo-app","reporter":"bob"}'
+  -d '{"title":"Migrate payments to Stripe v3","description":"Update all Stripe API calls including webhook handling","repo":"nexguard-org/demo-app","reporter":"bob"}'
 ```
 
 Check `riskReasons` in the response:

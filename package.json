@@ -1,5 +1,5 @@
 {
-  "name": "devguard",
+  "name": "nexguard",
   "version": "1.0.0",
   "description": "Human-governed AI coding agent orchestration platform",
   "main": "dist/index.js",

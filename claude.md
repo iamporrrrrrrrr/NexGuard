@@ -1,8 +1,8 @@
-# DevGuard — Project Context for Claude Code
+# NexGuard — Project Context for Claude Code
 
 ## What We're Building
 
-DevGuard is a human-governed AI coding agent orchestration platform built on top of OpenAI Codex. It intercepts every AI-generated code change, scores its blast radius, and routes it through a risk-tiered approval system before anything touches the codebase. It covers the full SDLC: development, testing, deployment, incident response, communication, and governance.
+NexGuard is a human-governed AI coding agent orchestration platform built on top of OpenAI Codex. It intercepts every AI-generated code change, scores its blast radius, and routes it through a risk-tiered approval system before anything touches the codebase. It covers the full SDLC: development, testing, deployment, incident response, communication, and governance.
 
 ## Core Concept
 
@@ -421,8 +421,8 @@ OPENAI_API_KEY=
 GITHUB_TOKEN=
 SLACK_WEBHOOK_URL=
 SLACK_BOT_TOKEN=
-DEVGUARD_APP_URL=http://localhost:3000   # ngrok URL during demo
-DATABASE_URL=postgresql://user:pass@localhost:5432/devguard
+NEXGUARD_APP_URL=http://localhost:3000   # ngrok URL during demo
+DATABASE_URL=postgresql://user:pass@localhost:5432/nexguard
 REDIS_URL=redis://localhost:6379
 CHROMA_PERSIST_DIR=./chroma_db
 ```
@@ -450,7 +450,7 @@ await fetch("/intake", {
     title: "Add docstrings to orders module",
     description:
       "Document all public functions in orders.py with Google-style docstrings",
-    repo: "devguard-org/demo-app",
+    repo: "nexguard-org/demo-app",
     reporter: "alice",
   }),
 });
@@ -462,7 +462,7 @@ await fetch("/intake", {
     title: "Migrate payments from Stripe v2 to v3 SDK",
     description:
       "Update all Stripe API calls to use the new v3 SDK including webhook handling",
-    repo: "devguard-org/demo-app",
+    repo: "nexguard-org/demo-app",
     reporter: "bob",
   }),
 });
@@ -474,7 +474,7 @@ await fetch("/incident", {
     description:
       "orders-api returning 500 errors spiking since last deployment",
     logs: "sqlalchemy.exc.OperationalError: no such column: orders.user_id_new",
-    repo: "devguard-org/demo-app",
+    repo: "nexguard-org/demo-app",
     reporter: "charlie",
   }),
 });

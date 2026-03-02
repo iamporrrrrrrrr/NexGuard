@@ -133,7 +133,7 @@ export default function SettingsView() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <Info size={15} color="#a5b4fc" />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9" }}>About DevGuard</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9" }}>About NexGuard</span>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
           {[

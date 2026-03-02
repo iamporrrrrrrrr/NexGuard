@@ -11,7 +11,7 @@ export interface HotfixCandidate {
   blastRadius: "LOW" | "MEDIUM" | "HIGH";
 }
 
-const SYSTEM_PROMPT = `You are DevGuard Incident Agent. Given an incident and error logs, generate 3 ranked hotfix candidates.
+const SYSTEM_PROMPT = `You are NexGuard Incident Agent. Given an incident and error logs, generate 3 ranked hotfix candidates.
 
 Respond with valid JSON:
 {

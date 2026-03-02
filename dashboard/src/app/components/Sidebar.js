@@ -63,7 +63,7 @@ export default function Sidebar({ activePage = "Overview", onNavigate, pendingCo
                 lineHeight: 1.2,
               }}
             >
-              DevGuard
+              NexGuard
             </div>
             <div style={{ color: "#64748b", fontSize: 11 }}>AI Governance</div>
           </div>
@@ -98,7 +98,7 @@ export default function Sidebar({ activePage = "Overview", onNavigate, pendingCo
         >
           <Building2 size={15} color="#94a3b8" />
           <span style={{ color: "#cbd5e1", fontSize: 13, fontWeight: 500 }}>
-            devguard-org
+            nexguard-org
           </span>
           <ChevronDown size={13} color="#475569" style={{ marginLeft: "auto" }} />
         </div>

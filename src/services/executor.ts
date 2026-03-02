@@ -25,7 +25,7 @@ export async function executeProposal(proposalId: string): Promise<{ prUrl: stri
     where: { id: proposalId },
   });
 
-  const branch = `devguard/${slugify(proposal.ticketTitle)}-${proposalId.slice(0, 8)}`;
+  const branch = `nexguard/${slugify(proposal.ticketTitle)}-${proposalId.slice(0, 8)}`;
 
   try {
     // 2. Create branch off main
@@ -36,7 +36,7 @@ export async function executeProposal(proposalId: string): Promise<{ prUrl: stri
       proposal.repo,
       branch,
       proposal.diff,
-      `fix: ${proposal.ticketTitle} [DevGuard]`
+      `fix: ${proposal.ticketTitle} [NexGuard]`
     );
 
     // 5. Generate PR description from audit trail (falls back to summary if not yet implemented)
@@ -44,14 +44,14 @@ export async function executeProposal(proposalId: string): Promise<{ prUrl: stri
     try {
       prBody = await generatePRDescription(proposalId);
     } catch {
-      prBody = `**DevGuard Auto-PR**\n\n${proposal.summary}\n\n> Proposal ID: ${proposalId}`;
+      prBody = `**NexGuard Auto-PR**\n\n${proposal.summary}\n\n> Proposal ID: ${proposalId}`;
     }
 
     // 6. Open PR
     const prUrl = await openPR(
       proposal.repo,
       branch,
-      `[DevGuard] ${proposal.ticketTitle}`,
+      `[NexGuard] ${proposal.ticketTitle}`,
       prBody
     );
 
@@ -104,7 +104,7 @@ export async function executeHotfix(hotfixId: string, appliedBy: string): Promis
     include: { incident: true },
   });
 
-  const branch = `devguard/hotfix-${hotfix.incidentId.slice(0, 8)}-${hotfixId.slice(0, 8)}`;
+  const branch = `nexguard/hotfix-${hotfix.incidentId.slice(0, 8)}-${hotfixId.slice(0, 8)}`;
 
   // 2. Create branch, apply diff, open emergency PR
   await createBranch(hotfix.incident.repo, branch);
@@ -113,11 +113,11 @@ export async function executeHotfix(hotfixId: string, appliedBy: string): Promis
     hotfix.incident.repo,
     branch,
     hotfix.diff,
-    `hotfix: ${hotfix.summary} [DevGuard emergency]`
+    `hotfix: ${hotfix.summary} [NexGuard emergency]`
   );
 
   const prBody = [
-    `**🚨 DevGuard Emergency Hotfix**`,
+    `**🚨 NexGuard Emergency Hotfix**`,
     ``,
     `**Incident:** ${hotfix.incident.description}`,
     `**Hotfix:** ${hotfix.summary}`,
@@ -131,7 +131,7 @@ export async function executeHotfix(hotfixId: string, appliedBy: string): Promis
   const prUrl = await openPR(
     hotfix.incident.repo,
     branch,
-    `[DevGuard HOTFIX] ${hotfix.summary}`,
+    `[NexGuard HOTFIX] ${hotfix.summary}`,
     prBody
   );
 

@@ -36,7 +36,7 @@ export default function TopBar({ isLive, lastUpdated, activePage = "Overview", n
     >
       {/* Breadcrumb */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ color: "#9ca3af", fontSize: 13 }}>DevGuard</span>
+        <span style={{ color: "#9ca3af", fontSize: 13 }}>NexGuard</span>
         <span style={{ color: "#d1d5db", fontSize: 13 }}>/</span>
         <span style={{ color: "#111827", fontSize: 13, fontWeight: 600 }}>
           {activePage}

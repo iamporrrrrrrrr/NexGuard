@@ -3,7 +3,7 @@ import { CodexProposal, RiskScore } from "../types";
 
 const openai = new OpenAI();
 
-const SYSTEM_PROMPT = `You are DevGuard Reviewer, a senior security engineer doing a final review of an AI-generated code change.
+const SYSTEM_PROMPT = `You are NexGuard Reviewer, a senior security engineer doing a final review of an AI-generated code change.
 
 Respond with valid JSON:
 {

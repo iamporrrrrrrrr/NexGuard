@@ -290,7 +290,7 @@ def compute_accuracy(model: nn.Module, green: torch.Tensor, red: torch.Tensor, t
 
 def train():
     print("=" * 70)
-    print("  DevGuard Anomaly Detector — Training Pipeline (1000 samples)")
+    print("  NexGuard Anomaly Detector — Training Pipeline (1000 samples)")
     print("=" * 70)
 
     # ---- Step 1: Acquire data ----

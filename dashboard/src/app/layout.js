@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "DevGuard Dashboard",
+  title: "NexGuard Dashboard",
   description: "Human-governed AI coding agent orchestration platform",
 };
 

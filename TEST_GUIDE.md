@@ -103,7 +103,7 @@ Navigate to http://localhost:5555 and check:
 # Test simple notification (requires SLACK_WEBHOOK_URL in .env)
 node -e "
 const { notify } = require('./src/integrations/slack.ts');
-notify('Test notification from DevGuard!');
+notify('Test notification from NexGuard!');
 "
 ```
 

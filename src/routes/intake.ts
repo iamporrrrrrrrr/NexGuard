@@ -19,7 +19,7 @@ import { executeProposal } from "../services/executor";
 const router: Router = Router();
 
 // ---------------------------------------------------------------------------
-// Shared pipeline — processes a TicketInput through the full DevGuard flow
+// Shared pipeline — processes a TicketInput through the full NexGuard flow
 // ---------------------------------------------------------------------------
 async function processTicket(ticket: TicketInput): Promise<{
   proposalId: string;
@@ -338,7 +338,7 @@ async function processTicket(ticket: TicketInput): Promise<{
 }
 
 // ---------------------------------------------------------------------------
-// POST / — Direct DevGuard intake (also works as manual Jira mock)
+// POST / — Direct NexGuard intake (also works as manual Jira mock)
 // ---------------------------------------------------------------------------
 router.post("/", async (req: Request, res: Response) => {
   try {
@@ -388,7 +388,7 @@ router.post("/jira", async (req: Request, res: Response) => {
 
     const fields = issue.fields;
 
-    // Map Jira fields → DevGuard TicketInput
+    // Map Jira fields → NexGuard TicketInput
     const ticket: TicketInput = {
       title: fields.summary || "Untitled",
       description:
@@ -445,7 +445,7 @@ router.post("/jira", async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 
 function extractRepo(fields: any): string {
-  // 1. Label like "repo:devguard-org/demo-app"
+  // 1. Label like "repo:nexguard-org/demo-app"
   const repoLabel = fields.labels?.find((l: string) => l.startsWith("repo:"));
   if (repoLabel) return repoLabel.replace("repo:", "");
 

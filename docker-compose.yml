@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
-      POSTGRES_DB: devguard
+      POSTGRES_DB: nexguard
     ports:
       - "5433:5432"
     volumes:
