@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import axios from "axios";
 import * as crypto from "crypto";
+import { executeHotfix, executeProposal } from "../services/executor";
 
 // POST /slack/events — Slack interactive component callback
 const router: Router = Router();

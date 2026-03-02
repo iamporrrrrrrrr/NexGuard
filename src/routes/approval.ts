@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
-import { executeProposal } from "../services/executor";
+import { executeHotfix, executeProposal } from "../services/executor";
 import { getPolicy } from "../config/policy";
 
 // GET /approve/:id  — Approve a proposal (Slack button callback)

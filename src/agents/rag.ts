@@ -6,7 +6,7 @@ const COLLECTION_NAME = "proposals";
 const EMBEDDING_MODEL = "text-embedding-3-small";
 
 function getChroma(): ChromaClient {
-  return new ChromaClient({ path: process.env.CHROMA_PERSIST_DIR ?? "./chroma_db" });
+  return new ChromaClient({ path: process.env.CHROMA_URL ?? "http://localhost:8002" });
 }
 
 async function getCollection() {

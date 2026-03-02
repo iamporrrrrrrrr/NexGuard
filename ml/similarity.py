@@ -8,6 +8,7 @@ used by the RAG agent). No saved model — computed at runtime.
 Threshold: 0.92 similarity score.
 """
 
+import os
 import chromadb
 from openai import OpenAI
 from pydantic import BaseModel
@@ -16,7 +17,10 @@ SIMILARITY_THRESHOLD = 0.92
 CHROMA_COLLECTION = "proposals"
 
 client = OpenAI()
-chroma = chromadb.PersistentClient(path="../chroma_db")
+chroma = chromadb.HttpClient(
+    host=os.environ.get("CHROMA_HOST", "localhost"),
+    port=int(os.environ.get("CHROMA_PORT", "8002")),
+)
 
 
 class ProposalText(BaseModel):

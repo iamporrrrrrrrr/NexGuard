@@ -32,8 +32,10 @@ LR = 1e-3
 
 def fetch_green_embeddings() -> list[list[float]]:
     """Fetch embeddings of all GREEN-tier proposals from ChromaDB."""
-    chroma_dir = os.environ.get("CHROMA_PERSIST_DIR", "../chroma_db")
-    client = chromadb.PersistentClient(path=chroma_dir)
+    client = chromadb.HttpClient(
+        host=os.environ.get("CHROMA_HOST", "localhost"),
+        port=int(os.environ.get("CHROMA_PORT", "8002")),
+    )
     try:
         collection = client.get_collection(CHROMA_COLLECTION)
     except Exception:

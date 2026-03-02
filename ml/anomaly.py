@@ -64,8 +64,11 @@ class Autoencoder(nn.Module):
         return self.decoder(self.encoder(x))
 
 
-def load_autoencoder() -> dict:
-    """Load trained autoencoder weights and threshold from disk."""
+def load_autoencoder() -> dict | None:
+    """Load trained autoencoder weights and threshold from disk. Returns None if not trained yet."""
+    import os
+    if not os.path.exists(MODEL_PATH) or not os.path.exists(THRESHOLD_PATH):
+        return None
     model = Autoencoder()
     model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
     model.eval()
