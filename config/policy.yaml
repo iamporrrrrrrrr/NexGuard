@@ -14,13 +14,12 @@ risk:
 
 fail_safe:
   # Patterns that always trigger RED regardless of score
+  # Keep these very specific to avoid false positives on YELLOW tickets
   always_red_patterns:
-    - "payment"
-    - "stripe"
-    - "migration"
     - "drop table"
     - "drop column"
     - "rm -rf"
+    - "node_tls_reject_unauthorized"
 
 incident:
   countdown_seconds: 45

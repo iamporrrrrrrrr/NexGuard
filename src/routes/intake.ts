@@ -113,6 +113,41 @@ router.post("/", async (req: Request, res: Response) => {
     // -----------------------------------------------------------------------
     let riskScore: RiskScore = await scoreRisk(proposal);
 
+    // Description-based RED override — catch dangerous intents the diff scan may miss
+    if (riskScore.tier !== "RED") {
+      const descLower = `${title} ${description}`.toLowerCase();
+      const redKeywordGroups: { match: (s: string) => boolean; label: string }[] = [
+        { match: (s) => /remove.{0,20}(auth|guard|jwt|throttl|rate.?limit)/.test(s), label: "removes security mechanism" },
+        { match: (s) => /(plaintext|plain.text).{0,15}password|store.{0,20}password.{0,20}(plain|raw|direct)/.test(s), label: "plaintext password storage" },
+        { match: (s) => /hardcod.{0,15}(key|secret|credential|api|password)/.test(s), label: "hardcoded credentials" },
+        { match: (s) => /backdoor/.test(s), label: "backdoor" },
+        { match: (s) => /\beval\s*\(|use eval/.test(s), label: "eval() usage" },
+        { match: (s) => /child.?process|exec.{0,10}(script|command|user|arbitrary)/.test(s), label: "shell command execution" },
+        { match: (s) => /disable.{0,15}(tls|ssl|cert)|node.tls.reject/.test(s), label: "TLS verification disabled" },
+        { match: (s) => /(bypass|disable|remove).{0,15}cors|origin.{0,10}wildcard|allow.{0,10}all.{0,10}origin/.test(s), label: "CORS bypass" },
+        { match: (s) => /console\.log.{0,30}(password|credential|secret|token)/.test(s), label: "credential logging" },
+        { match: (s) => /remove.{0,20}(validation|validatepipe|validation.?pipe)/.test(s), label: "removes input validation" },
+        { match: (s) => /delete.{0,10}all.{0,10}(user|session|data)|nuke.{0,10}(user|data)/.test(s), label: "destructive data deletion" },
+        { match: (s) => /(expose|return|log).{0,20}(stack.?trace|exception\.stack)/.test(s), label: "stack trace exposure" },
+        { match: (s) => /string.{0,10}concat.{0,20}(sql|query)|sql.{0,20}string.{0,10}concat/.test(s), label: "SQL string concatenation" },
+        { match: (s) => /expose.{0,20}(database.?url|connection.?string|env.?var.{0,10}(in.response|api|endpoint))/.test(s), label: "exposes secrets via API" },
+        { match: (s) => /(remove|skip|without).{0,20}test(s|\b)|no.{0,10}test.step/.test(s), label: "skips test execution" },
+      ];
+
+      for (const { match, label } of redKeywordGroups) {
+        if (match(descLower)) {
+          riskScore = {
+            ...riskScore,
+            tier: "RED",
+            score: Math.max(riskScore.score, 85),
+            reasons: [`Description indicates high-risk intent: ${label}`, ...riskScore.reasons],
+            failSafeTriggered: true,
+          };
+          break;
+        }
+      }
+    }
+
     if (anomalyFlagged) {
       riskScore = {
         ...riskScore,
