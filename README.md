@@ -2,6 +2,8 @@
 
 **Human-Governed AI Coding Agent Orchestration Platform**
 
+<img width="2371" height="1339" alt="image" src="https://github.com/user-attachments/assets/b1f2ba4f-abeb-489f-bea6-f9a12537ba0a" />
+
 NexGuard is a production-ready platform that intercepts AI-generated code changes, scores their blast radius using machine learning, and routes them through a risk-tiered human approval system. Unlike traditional CI/CD pipelines that act *after* deployment, NexGuard operates *before* code reaches version control — providing human oversight of AI agents during the development phase.
 
 ## Problem
@@ -33,6 +35,9 @@ Three ML models combine with three GPT-4o agents to create a defense-in-depth sy
 4. **System logs** everything in an append-only audit trail for compliance
 
 ## Architecture
+
+<img width="2160" height="1215" alt="Architecture" src="https://github.com/user-attachments/assets/c0a1d387-8370-48f3-b799-52fe443714a9" />
+
 
 ### Data Flow
 
